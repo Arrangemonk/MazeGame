@@ -7,15 +7,16 @@ namespace MazeGame
 {
     internal static class Program
     {
-        private static int sizex = 1600;
-        private static int sizey = 900;
-        private static int mazesize = 20;
+        private static int sizex = 2560;
+        private static int sizey = 1440;
 
         public static void Main()
         {
             Raylib.SetConfigFlags(ConfigFlags.FLAG_MSAA_4X_HINT);
+            Raylib.SetConfigFlags(ConfigFlags.FLAG_FULLSCREEN_MODE);
             Raylib.InitWindow(sizex, sizey, "Maze Game");
             Raylib.SetTargetFPS(60);
+            Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);
 
             var loop = new GameLoop();
             Raylib.DisableCursor();

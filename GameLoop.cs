@@ -40,6 +40,7 @@ namespace MazeGame
         private static readonly Color clsColor = Tools.ColorFromFloat(0.05f, 0.1f, 0.055f, 1.0f);
         private static readonly float Speed = 0.2f;
         private Vector3 _oldpos;
+        private Vector3 _oldtarget;
         private bool _displayOverlay;
         private bool _wireframe;
 
@@ -63,6 +64,7 @@ namespace MazeGame
             _specularPosLoc = Raylib.GetShaderLocation(_shader, "viewPos");
 
             _oldpos = _camera.position;
+            _oldtarget= _camera.target;
             Raylib.DisableCursor();
         }
 
@@ -81,6 +83,13 @@ namespace MazeGame
 
         private void ProcessInputs()
         {
+            if (Raylib.IsKeyDown(KeyboardKey.KEY_F3))
+            {
+                const string screenshots = nameof(screenshots);
+                if (!Directory.Exists(screenshots))
+                    Directory.CreateDirectory(screenshots);
+                Raylib.TakeScreenshot($"{screenshots}/{Guid.NewGuid()}.png");
+            }
             if (Raylib.IsKeyPressed(KeyboardKey.KEY_R))
                 ResetMaze();
             if (Raylib.IsKeyPressed(KeyboardKey.KEY_F1))
@@ -97,11 +106,27 @@ namespace MazeGame
 
         private void UpdateCamera()
         {
-            Raylib.UpdateCamera(ref _camera, CameraMode.CAMERA_FIRST_PERSON);
-            _camera.position = Vector3.Lerp(_oldpos, _camera.position, Speed);
+            const float cameraMoveSpeed = 0.03f;
+            const float cameraMouseMoveSensitivity = 0.003f;
 
-            _camera.position = Tools.Collision(_oldpos, _camera.position, _maze);
+            Vector2 mousePositionDelta = Raylib.GetMouseDelta();
+            Camera3D cam = _camera;
+            unsafe
+            {
+                Raylib.CameraYaw(&cam, -mousePositionDelta.X * cameraMouseMoveSensitivity, false);
+                Raylib.CameraPitch(&cam, -mousePositionDelta.Y * cameraMouseMoveSensitivity, false, false, false);
+
+                if (Raylib.IsKeyDown(KeyboardKey.KEY_W)) Raylib.CameraMoveForward(&cam, cameraMoveSpeed, true);
+                if (Raylib.IsKeyDown(KeyboardKey.KEY_A)) Raylib.CameraMoveRight(&cam, -cameraMoveSpeed, true);
+                if (Raylib.IsKeyDown(KeyboardKey.KEY_S)) Raylib.CameraMoveForward(&cam, -cameraMoveSpeed, true);
+                if (Raylib.IsKeyDown(KeyboardKey.KEY_D)) Raylib.CameraMoveRight(&cam, cameraMoveSpeed, true);
+            }
+
+            _camera = cam;
+            (_camera.position,_camera.target) = Tools.Collision(_oldpos, _camera.position, _oldtarget,_camera.target,_maze);
             _oldpos = _camera.position;
+            _oldtarget = _camera.target;
+
             Raylib.SetShaderValue(_shader, _lightPosLoc, _camera.position + Vector3.Normalize(_camera.target - _camera.position) * .1f, ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Raylib.SetShaderValue(_shader, _specularPosLoc, _camera.position, ShaderUniformDataType.SHADER_UNIFORM_VEC3);
         }
@@ -126,7 +151,7 @@ namespace MazeGame
 
         private (int, int) TileIndexFromCamera()
         {
-            return (-(int)Math.Floor(_camera.position.X + 0.5f), -(int) Math.Floor(_camera.position.Z + 0.5f));
+            return (-(int)Math.Floor(_camera.position.X + 0.5f), -(int)Math.Floor(_camera.position.Z + 0.5f));
         }
 
         private IEnumerable<Directions> DirectionsFromCamera()
@@ -144,32 +169,14 @@ namespace MazeGame
             var tilesDrawn = 0;
             Raylib.DrawModel(_start, new Vector3(0, 0, 0), Scale, Tint);
             Raylib.DrawModel(_exit, new Vector3(-9, 0, -9), Scale, Tint);
-            //for (var z = 0; z < _maze.GetLength(0); z++)
-            //    for (var x = 0; x < _maze.GetLength(1); x++)
-            //    {
-            //        tilesDrawn++;
-            //        var dpos = new Vector3(-x, 0, -z);
-            //        if (_wireframe)
-            //        {
-            //            Raylib.DrawModelWires(_parts[_maze[x, z]], dpos, Scale, Tint);
-            //            Raylib.DrawModelWires(_mud, dpos, Scale, Tint);
-            //            Raylib.DrawModelWires(_moss, dpos, Scale, Tint);
-            //        }
-            //        else
-            //        {
-            //            Raylib.DrawModel(_parts[_maze[x, z]], dpos, Scale, Tint);
-            //            Raylib.DrawModel(_mud, dpos, Scale, Tint);
-            //            Raylib.DrawModel(_moss, dpos, Scale, Tint);
-            //        }
-            //    }
             var index = TileIndexFromCamera();
-            Checkvisibility(index.Item1, index.Item2, Directions.Undefined, 0,ref tilesDrawn);
+            Checkvisibility(index.Item1, index.Item2, Directions.Undefined, 0, ref tilesDrawn);
 
             Raylib.DrawSphere(_camera.position + Vector3.Normalize(_camera.target - _camera.position) * .1f, .001f, Color.WHITE);
             return tilesDrawn;
         }
 
-        private void Checkvisibility(int x, int z,Directions old, int depth,ref int tilesDrawn)
+        private void Checkvisibility(int x, int z, Directions old, int depth, ref int tilesDrawn)
         {
             if (depth > 7)
                 return;
@@ -200,7 +207,7 @@ namespace MazeGame
                 if (0 > cx || cx >= _maze.GetLength(0)
                  || 0 > cy || cy >= _maze.GetLength(1))
                     continue;
-                Checkvisibility(cx, cy, direction,depth,ref tilesDrawn);
+                Checkvisibility(cx, cy, direction, depth, ref tilesDrawn);
             }
         }
 

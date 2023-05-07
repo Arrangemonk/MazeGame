@@ -23,7 +23,7 @@ namespace MazeGame.Common
 
         public const float Pi = (float)Math.PI;
         public static TextureFilter Filter = TextureFilter.TEXTURE_FILTER_ANISOTROPIC_4X;
-        public static Vector3 Collision(Vector3 oldpos, Vector3 newpos, Blocks[,] maze)
+        public static (Vector3,Vector3) Collision(Vector3 oldpos, Vector3 newpos,Vector3 oldTarget,Vector3 newTarget, Blocks[,] maze)
         {
             const float high = short.MaxValue - .5f;
 
@@ -93,10 +93,10 @@ namespace MazeGame.Common
             var canmovez = (rectc || recdb);
 
 
-            return canmoveboth ? newpos : 
-                canmovex ? new Vector3(newpos.X, newpos.Y, oldpos.Z) : 
-                canmovez ? new Vector3(oldpos.X, newpos.Y, newpos.Z) : 
-                oldpos;
+            return canmoveboth ? (newpos,newTarget) : 
+                canmovex ? (new Vector3(newpos.X, newpos.Y, oldpos.Z), new Vector3(newTarget.X, newTarget.Y, oldTarget.Z)) : 
+                canmovez ? (new Vector3(oldpos.X, newpos.Y, newpos.Z), new Vector3(oldTarget.X, newTarget.Y, newTarget.Z)) : 
+                (oldpos,oldTarget);
 
         }
 
@@ -137,14 +137,14 @@ namespace MazeGame.Common
                     var texture = new Dictionary<string, Texture2D>();
 
                     d = LoadTexture(string.Format(path, textureName, diff,"dds"));
-                    SetTextureFilter(d, Filter);
                     GenTextureMipmaps(ref d);
+                    SetTextureFilter(d, Filter);
                     n = LoadTexture(string.Format(path, textureName, normal, "dds"));
-                    SetTextureFilter(n, Filter);
                     GenTextureMipmaps(ref n);
+                    SetTextureFilter(n, Filter);
                     s = LoadTexture(string.Format(path, textureName, spec, "dds"));
-                    SetTextureFilter(s, Filter);
                     GenTextureMipmaps(ref s);
+                    SetTextureFilter(s, Filter);
                     texture.Add(diff, d);
                     texture.Add(normal, n);
                     texture.Add(spec, s);
@@ -165,7 +165,6 @@ namespace MazeGame.Common
                 shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = GetShaderLocation(shader, "diffuse");
                 shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = GetShaderLocation(shader, "specular");
                 shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = GetShaderLocation(shader, "normalMap");
-
                 model.materials[0].shader = shader;
                 model.transform = transform;
                 GenMeshTangents(model.meshes);
@@ -182,7 +181,7 @@ namespace MazeGame.Common
         {
             return new Camera3D
             {
-                target = new Vector3(-30f, 0.0f, -30f),
+                target = new Vector3(-1, 0, 0),
                 up = new Vector3(0.0f, 1.0f, 0.0f),
                 position = new Vector3(0, 0, 0),
                 fovy = 45.0f,

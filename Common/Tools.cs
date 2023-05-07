@@ -1,7 +1,9 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.XPath;
@@ -14,9 +16,13 @@ namespace MazeGame.Common
 
     public class Tools
     {
+        public static Color ColorFromFloat(float r, float g, float b,float a)
+        {
+            return new Color((int)(r * 255f), (int)(g * 255f), (int)(b * 255f), (int)(a * 255f));
+        }
 
-        public const float PI = (float)Math.PI;
-        public static TextureFilter filter = TextureFilter.TEXTURE_FILTER_TRILINEAR;
+        public const float Pi = (float)Math.PI;
+        public static TextureFilter Filter = TextureFilter.TEXTURE_FILTER_ANISOTROPIC_4X;
         public static Vector3 Collision(Vector3 oldpos, Vector3 newpos, Blocks[,] maze)
         {
             const float high = short.MaxValue - .5f;
@@ -94,13 +100,6 @@ namespace MazeGame.Common
 
         }
 
-
-
-        private static bool Bounds(float lowerBound, float value, float upperBound)
-        {
-            return lowerBound < value && value < upperBound;
-        }
-
         private static float Range(bool condiditon)
         {
             return condiditon ? 2f : 0.8f;
@@ -138,14 +137,14 @@ namespace MazeGame.Common
                     var texture = new Dictionary<string, Texture2D>();
 
                     d = LoadTexture(string.Format(path, textureName, diff,"dds"));
+                    SetTextureFilter(d, Filter);
                     GenTextureMipmaps(ref d);
-                    SetTextureFilter(d, filter);
                     n = LoadTexture(string.Format(path, textureName, normal, "dds"));
+                    SetTextureFilter(n, Filter);
                     GenTextureMipmaps(ref n);
-                    SetTextureFilter(n, filter);
                     s = LoadTexture(string.Format(path, textureName, spec, "dds"));
+                    SetTextureFilter(s, Filter);
                     GenTextureMipmaps(ref s);
-                    SetTextureFilter(s, filter);
                     texture.Add(diff, d);
                     texture.Add(normal, n);
                     texture.Add(spec, s);

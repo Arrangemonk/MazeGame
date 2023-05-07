@@ -66,7 +66,7 @@ void main()
 
     // these could be parameters...
     const vec4 fogColor = vec4(0.05, 0.1, 0.055, 1.0);
-    const float fogDensity = 0.20;
+    const float fogDensity = 0.3;
 
     // Exponential fog
     float fogFactor = 1.0/exp((dist*fogDensity)*(dist*fogDensity));

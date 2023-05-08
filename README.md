@@ -1,4 +1,4 @@
-#MazeGame
+# MazeGame
 
 except for the water and the fade to black basically all the features of the original are restored
 f1 -> debug screen

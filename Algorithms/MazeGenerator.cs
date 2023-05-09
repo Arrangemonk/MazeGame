@@ -45,17 +45,26 @@ namespace MazeGame.Algorithms
             .Where(dir => dir != Directions.Undefined).ToList();
 
 
-        private static readonly Random Rng = new Random();
+        public static readonly Random Rng = new Random();
+
+        public static int[,] GenerateRandomIntegers(int rows, int cols)
+        {
+            var result = new int[rows, cols];
+            for(var x = 0; x < cols; x++)
+            for (var y = 0; y < rows; y++)
+                result[x, y] = Rng.Next(0, 100);
+            return result;
+        }
 
         public static Blocks[,] GenerateMaze(int rows, int cols)
         {
             var maze = new Blocks[rows, cols];
 
-            CarvePassagesFrom(Rng.Next(0, rows - 1), Rng.Next(0, cols - 1), maze);
+            CarvePassagesFromIterative(Rng.Next(0, rows - 1), Rng.Next(0, cols - 1),ref maze);
             return maze;
         }
 
-        private static void CarvePassagesFrom(int x, int y, Blocks[,] grid)
+        private static void CarvePassagesFrom(int x, int y,ref Blocks[,] grid)
         {
             var directions = ValidDirections.OrderBy(e => Rng.Next());
 
@@ -65,24 +74,62 @@ namespace MazeGame.Algorithms
                 var cy = y + Dy(dir);
                 if (0 > cx || cx >= grid.GetLength(0)
                            || 0 > cy || cy >= grid.GetLength(1)
-                           || grid[cx, cy] != Blocks.Undefined) 
+                           || grid[cx, cy] != Blocks.Undefined)
                     continue;
                 grid[x, y] = (Blocks)((int)dir + (int)grid[x, y]);
                 grid[cx, cy] = (Blocks)Opposite(dir);
-                CarvePassagesFrom(cx, cy, grid);
+                CarvePassagesFrom(cx, cy,ref grid);
+            }
+        }
+
+        private static void CarvePassagesFromIterative(int startX, int startY, ref Blocks[,] grid)
+        {
+            var path = new List<(int x, int y)>();
+            var stack = new Stack<(int x, int y)>();
+            stack.Push((startX, startY));
+            path.Add((startX, startY));
+
+            while (stack.Count > 0)
+            {
+                var (x, y) = stack.Peek();
+                var directions = ValidDirections.OrderBy(e => Rng.Next()).ToList();
+                bool hasUnvisited = false;
+
+                foreach (var dir in directions)
+                {
+                    var cx = x + Dx(dir);
+                    var cy = y + Dy(dir);
+                    if (0 > cx || cx >= grid.GetLength(0) ||
+                        0 > cy || cy >= grid.GetLength(1) ||
+                        grid[cx, cy] != Blocks.Undefined) continue;
+
+                    grid[x, y] = (Blocks)((int)dir + (int)grid[x, y]);
+                    grid[cx, cy] = (Blocks)Opposite(dir);
+                    stack.Push((cx, cy));
+                    path.Add((cx, cy));
+                    hasUnvisited = true;
+                    break;
+                }
+
+                if (hasUnvisited) continue;
+                stack.Pop();
+                if (path.Count <= 1) continue;
+                path.RemoveAt(path.Count - 1);
+                var prev = path[^1];
+                stack.Push(prev);
             }
         }
 
         public static IEnumerable<Directions> Dirx(float x)
         {
-            x = (float)Math.Round(x, MidpointRounding.AwayFromZero);
+            x = (float)Math.Round(x * 2, MidpointRounding.AwayFromZero);
             return x > 0 ? new[] { Directions.East } :
                 x < 0 ? new[] { Directions.West } : new[] { Directions.East, Directions.West };
         }
 
         public static IEnumerable<Directions> Diry(float y)
         {
-            y = (float)Math.Round(y, MidpointRounding.AwayFromZero);
+            y = (float)Math.Round(y * 2, MidpointRounding.AwayFromZero);
             return y > 0 ? new[] { Directions.North } :
                 y < 0 ? new[] { Directions.South } : new[] { Directions.North, Directions.South };
         }
@@ -131,7 +178,7 @@ namespace MazeGame.Algorithms
         }
 
         public static Dictionary<Blocks, Model> PrepareMazeParts(Shader shader,
-            ref Dictionary<string, Dictionary<string, Texture2D>> textures)
+            ref Dictionary<string, Dictionary<string, Texture2D>> textures,ref List<Model> models)
         {
             var rot000 = Matrix4x4.Identity;
             var rot090 = Matrix4x4.CreateRotationY(Tools.Pi * .5f);
@@ -146,44 +193,44 @@ namespace MazeGame.Algorithms
 
             var result = new Dictionary<Blocks, Model>
             {
-                { Blocks.Horizontal, Tools.PrepareModel(straight, pipe, shader, rot090, ref textures) },
-                { Blocks.Vertical, Tools.PrepareModel(straight, pipe, shader, rot000, ref textures) },
-                { Blocks.CornerNorhEast, Tools.PrepareModel(corner, pipe, shader, rot000, ref textures) },
-                { Blocks.CornerNorthWest, Tools.PrepareModel(corner, pipe, shader, rot090, ref textures) },
-                { Blocks.CornderSouthEast, Tools.PrepareModel(corner, pipe, shader, rot270, ref textures) },
-                { Blocks.CornerSouthWest, Tools.PrepareModel(corner, pipe, shader, rot180, ref textures) },
-                { Blocks.TcrossHorizontalNorth, Tools.PrepareModel(tcross, pipe, shader, rot000, ref textures) },
-                { Blocks.TcrossHorizontalSouth, Tools.PrepareModel(tcross, pipe, shader, rot180, ref textures) },
-                { Blocks.TcrossVerticalEast, Tools.PrepareModel(tcross, pipe, shader, rot270, ref textures) },
-                { Blocks.TcrossVerticalWest, Tools.PrepareModel(tcross, pipe, shader, rot090, ref textures) },
-                { Blocks.EndNorth, Tools.PrepareModel(end, pipe, shader, rot000, ref textures) },
-                { Blocks.EndSouth, Tools.PrepareModel(end, pipe, shader, rot180, ref textures) },
-                { Blocks.EndEast, Tools.PrepareModel(end, pipe, shader, rot270, ref textures) },
-                { Blocks.EndWest, Tools.PrepareModel(end, pipe, shader, rot090, ref textures) },
-                { Blocks.Cross, Tools.PrepareModel(cross, pipe, shader, rot000, ref textures) }
+                { Blocks.Horizontal, Tools.PrepareModel(straight, pipe, shader, rot090, ref textures,ref models) },
+                { Blocks.Vertical, Tools.PrepareModel(straight, pipe, shader, rot000, ref textures, ref models) },
+                { Blocks.CornerNorhEast, Tools.PrepareModel(corner, pipe, shader, rot000, ref textures, ref models) },
+                { Blocks.CornerNorthWest, Tools.PrepareModel(corner, pipe, shader, rot090, ref textures, ref models) },
+                { Blocks.CornderSouthEast, Tools.PrepareModel(corner, pipe, shader, rot270, ref textures, ref models) },
+                { Blocks.CornerSouthWest, Tools.PrepareModel(corner, pipe, shader, rot180, ref textures, ref models) },
+                { Blocks.TcrossHorizontalNorth, Tools.PrepareModel(tcross, pipe, shader, rot000, ref textures, ref models) },
+                { Blocks.TcrossHorizontalSouth, Tools.PrepareModel(tcross, pipe, shader, rot180, ref textures, ref models) },
+                { Blocks.TcrossVerticalEast, Tools.PrepareModel(tcross, pipe, shader, rot270, ref textures, ref models) },
+                { Blocks.TcrossVerticalWest, Tools.PrepareModel(tcross, pipe, shader, rot090, ref textures, ref models) },
+                { Blocks.EndNorth, Tools.PrepareModel(end, pipe, shader, rot000, ref textures, ref models) },
+                { Blocks.EndSouth, Tools.PrepareModel(end, pipe, shader, rot180, ref textures, ref models) },
+                { Blocks.EndEast, Tools.PrepareModel(end, pipe, shader, rot270, ref textures, ref models) },
+                { Blocks.EndWest, Tools.PrepareModel(end, pipe, shader, rot090, ref textures, ref models) },
+                { Blocks.Cross, Tools.PrepareModel(cross, pipe, shader, rot000, ref textures, ref models) }
             };
             return result;
         }
 
-        public static Dictionary<Blocks, Rectangle> PrepareMazePrint()
+        public static Dictionary<Blocks, Rectangle> PrepareMazePrint(int size)
         {
             var result = new Dictionary<Blocks, Rectangle>
             {
-                { Blocks.Horizontal, new Rectangle(64, 64, 32, 32) },
-                { Blocks.Vertical, new Rectangle(32, 32, 32, 32) },
-                { Blocks.CornerNorhEast, new Rectangle(32, 64 , 32, 32) },
-                { Blocks.CornerNorthWest, new Rectangle(96, 00 , 32, 32) },
-                { Blocks.CornderSouthEast, new Rectangle(00, 96, 32, 32) },
-                { Blocks.CornerSouthWest, new Rectangle(64, 32, 32, 32) },
-                { Blocks.TcrossHorizontalNorth, new Rectangle(96, 64, 32, 32) },
-                { Blocks.TcrossHorizontalSouth, new Rectangle(64, 96, 32, 32) },
-                { Blocks.TcrossVerticalEast, new Rectangle(32, 96, 32, 32) },
-                { Blocks.TcrossVerticalWest, new Rectangle(96, 32, 32, 32) },
-                { Blocks.EndNorth, new Rectangle(32, 00, 32, 32) },
-                { Blocks.EndSouth, new Rectangle(00, 32, 32, 32) },
-                { Blocks.EndEast, new Rectangle(00, 64, 32, 32) },
-                { Blocks.EndWest, new Rectangle(64, 00, 32, 32) },
-                { Blocks.Cross, new Rectangle(96, 96, 32, 32) }
+                { Blocks.Horizontal, new Rectangle(2 * size, 2 * size, size, size) },
+                { Blocks.Vertical, new Rectangle(size, size, size, size) },
+                { Blocks.CornerNorhEast, new Rectangle(size, 2 * size , size, size) },
+                { Blocks.CornerNorthWest, new Rectangle(3* size, 0 , size, size) },
+                { Blocks.CornderSouthEast, new Rectangle(0, 3* size, size, size) },
+                { Blocks.CornerSouthWest, new Rectangle(2 * size, size, size, size) },
+                { Blocks.TcrossHorizontalNorth, new Rectangle(3* size, 2 * size, size, size) },
+                { Blocks.TcrossHorizontalSouth, new Rectangle(2 * size, 3* size, size, size) },
+                { Blocks.TcrossVerticalEast, new Rectangle(size, 3* size, size, size) },
+                { Blocks.TcrossVerticalWest, new Rectangle(3* size, size, size, size) },
+                { Blocks.EndNorth, new Rectangle(size, 0, size, size) },
+                { Blocks.EndSouth, new Rectangle(0, size, size, size) },
+                { Blocks.EndEast, new Rectangle(0, 2 * size, size, size) },
+                { Blocks.EndWest, new Rectangle(2 * size, 0, size, size) },
+                { Blocks.Cross, new Rectangle(3* size, 3* size, size, size) }
             };
             return result;
         }

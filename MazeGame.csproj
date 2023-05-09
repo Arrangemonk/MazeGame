@@ -16,6 +16,9 @@
 
   <ItemGroup>
     <None Remove="resources\mazeblocks.png" />
+    <None Remove="resources\mazeblocks_32.png" />
+    <None Remove="resources\mazeblocks_4.png" />
+    <None Remove="resources\mazeblocks_8.png" />
     <None Remove="resources\models\corner.obj" />
     <None Remove="resources\models\cross.obj" />
     <None Remove="resources\models\end.obj" />
@@ -27,6 +30,7 @@
     <None Remove="resources\models\start.obj" />
     <None Remove="resources\models\straight.obj" />
     <None Remove="resources\models\tcross.obj" />
+    <None Remove="resources\models\wall.obj" />
     <None Remove="resources\shaders\normal_mapping.fs" />
     <None Remove="resources\shaders\normal_mapping.vs" />
     <None Remove="resources\textures\exit_diff.dds" />
@@ -45,13 +49,26 @@
     <None Remove="resources\textures\pipe_disp.dds" />
     <None Remove="resources\textures\pipe_normal.dds" />
     <None Remove="resources\textures\pipe_spec.dds" />
+    <None Remove="resources\textures\spiderweb_diff.dds" />
+    <None Remove="resources\textures\spiderweb_disp.dds" />
+    <None Remove="resources\textures\spiderweb_normal.dds" />
+    <None Remove="resources\textures\spiderweb_spec.dds" />
     <None Remove="resources\textures\stairs_diff.dds" />
     <None Remove="resources\textures\stairs_normal.dds" />
     <None Remove="resources\textures\stairs_spec.dds" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="resources\mazeblocks.png">
+    <Content Include="resources\mazeblocks_32.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="resources\mazeblocks_4.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="resources\mazeblocks_8.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="resources\models\wall.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\models\corner.obj">
@@ -85,18 +102,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\models\tcross.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\textures\exit_diff.dds">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\textures\exit_disp.dds">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\textures\exit_normal.dds">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\textures\exit_spec.dds">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\textures\moss_diff.dds">
@@ -141,6 +146,18 @@
     <Content Include="resources\shaders\normal_mapping.vs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="resources\textures\spiderweb_diff.dds">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="resources\textures\spiderweb_disp.dds">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="resources\textures\spiderweb_normal.dds">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="resources\textures\spiderweb_spec.dds">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="resources\textures\stairs_diff.dds">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -157,7 +174,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="resources\models\cross_regular.obj">
+    <None Update="resources\models\spiderweb.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="resources\textures\2k\exit_diff.jpg">

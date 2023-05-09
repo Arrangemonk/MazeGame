@@ -10,23 +10,29 @@ using MazeGame.Algorithms;
 using MazeGame.Common;
 using Raylib_cs;
 using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace MazeGame
 {
     internal class GameLoop : IDisposable
     {
-        private const int Mazesize = 20;
+        private const int Mazesize = 225;
+        private const int Exitpos = 1 - Mazesize;
 
         private readonly Shader _shader;
-        private readonly Model _start;
+        private readonly Model _transit;
         private readonly Model _moss;
-        private readonly Model _exit;
         private readonly Model _mud;
+        //private readonly Model _wall;
+        private readonly Model _spiderweb;
         private readonly Texture2D _mazeblocks;
+        private RenderTexture2D mazeTexture;
 
         private readonly Dictionary<string, Dictionary<string, Texture2D>> _textures = new();
+        private readonly List<Model> _models = new();
 
         private Blocks[,] _maze;
+        private int[,] _randoms;
 
         private readonly Dictionary<Blocks, Rectangle> _tileset;
         private readonly Dictionary<Blocks, Model> _parts;
@@ -35,37 +41,60 @@ namespace MazeGame
         private readonly int _lightPosLoc;
         private readonly int _specularPosLoc;
 
-        private static readonly float Scale = 1.0f / 30;
+        private const float Scale = 1.0f / 30;
         private static readonly Color Tint = Color.WHITE;
-        private static readonly Color clsColor = Tools.ColorFromFloat(0.05f, 0.1f, 0.055f, 1.0f);
-        private static readonly float Speed = 0.2f;
+        private static readonly Color ClsColor = Color.BLACK;// Tools.ColorFromFloat(0.05f, 0.1f, 0.055f, 1.0f);
         private Vector3 _oldpos;
         private Vector3 _oldtarget;
         private bool _displayOverlay;
         private bool _wireframe;
+        private const int Blocksize = 4;
+        private const int Maxdepth = 7;
+        public const float Fps = 120;
+        public const float Ticks = 60;
+        public const float Tickscale = Ticks / Fps;
 
 
         public GameLoop()
         {
-            _maze = MazeGenerator.GenerateMaze(Mazesize, Mazesize);
             _shader = Tools.PrepareShader();
-            _start = Tools.PrepareModel("stairs", "stairs", _shader, Matrix4x4.Identity, ref _textures);
-            _moss = Tools.PrepareModel("moss", "moss", _shader, Matrix4x4.Identity, ref _textures);
-            _exit = Tools.PrepareModel("exit", "exit", _shader, Matrix4x4.Identity, ref _textures);
-            _mud = Tools.PrepareModel("floor", "mud", _shader, Matrix4x4.Identity, ref _textures);
-            _mazeblocks = Raylib.LoadTexture("resources/mazeblocks.png");
-            _tileset = MazeGenerator.PrepareMazePrint();
-            _parts = MazeGenerator.PrepareMazeParts(_shader, ref _textures);
+            _transit = Tools.PrepareModel("stairs", "stairs", _shader, Matrix4x4.Identity, ref _textures, ref _models);
+            //_wall = Tools.PrepareModel("wall", "pipe", _shader, Matrix4x4.Identity, ref _textures, ref _models);
+            _spiderweb = Tools.PrepareModel("spiderweb", "spiderweb", _shader, Matrix4x4.Identity, ref _textures, ref _models);
+            _moss = Tools.PrepareModel("moss", "moss", _shader, Matrix4x4.Identity, ref _textures, ref _models);
+            _mud = Tools.PrepareModel("floor", "mud", _shader, Matrix4x4.Identity, ref _textures, ref _models);
+            _mazeblocks = Raylib.LoadTexture($"resources/mazeblocks_{Blocksize}.png");
+            _tileset = MazeGenerator.PrepareMazePrint(Blocksize);
+            _parts = MazeGenerator.PrepareMazeParts(_shader, ref _textures,ref _models);
             _camera = Tools.CameraSetup();
-
+            ResetMaze();
             // Diffuse light
             _lightPosLoc = Raylib.GetShaderLocation(_shader, "lightPos");
             //specular light
             _specularPosLoc = Raylib.GetShaderLocation(_shader, "viewPos");
 
             _oldpos = _camera.position;
-            _oldtarget= _camera.target;
+            _oldtarget = _camera.target;
             Raylib.DisableCursor();
+
+            PrepareMazeTexture();
+        }
+
+        private void PrepareMazeTexture()
+        {
+            mazeTexture = Raylib.LoadRenderTexture(Mazesize * Blocksize, Mazesize * Blocksize);
+
+            Raylib.BeginTextureMode(mazeTexture);
+            for (var z = 0; z < _maze.GetLength(0); z++)
+            for (var x = 0; x < _maze.GetLength(1); x++)
+            {
+                var dpos = new Vector2(x * Blocksize, z * Blocksize);
+                Raylib.DrawTextureRec(_mazeblocks, _tileset[_maze[x, z]], dpos, Color.WHITE);
+            }
+
+            Raylib.EndTextureMode();
+            Raylib.GenTextureMipmaps(ref mazeTexture.texture);
+            Raylib.SetTextureFilter(mazeTexture.texture, TextureFilter.TEXTURE_FILTER_BILINEAR);
         }
 
         public void Draw()
@@ -73,7 +102,7 @@ namespace MazeGame
             ProcessInputs();
             UpdateCamera();
             Raylib.BeginDrawing();
-            Raylib.ClearBackground(clsColor);
+            Raylib.ClearBackground(ClsColor);
             Raylib.BeginMode3D(_camera);
             var tiles = DrawLevel();
             Raylib.EndMode3D();
@@ -102,12 +131,15 @@ namespace MazeGame
         {
             _oldpos = _camera.position = Vector3.Zero;
             _maze = MazeGenerator.GenerateMaze(Mazesize, Mazesize);
+            _randoms = MazeGenerator.GenerateRandomIntegers(Mazesize, Mazesize);
+            PrepareMazeTexture();
         }
 
         private void UpdateCamera()
         {
-            const float cameraMoveSpeed = 0.03f;
-            const float cameraMouseMoveSensitivity = 0.003f;
+
+            float cameraMoveSpeed = 0.03f * Tickscale;
+            float cameraMouseMoveSensitivity = 0.003f * Tickscale;
 
             Vector2 mousePositionDelta = Raylib.GetMouseDelta();
             Camera3D cam = _camera;
@@ -123,7 +155,7 @@ namespace MazeGame
             }
 
             _camera = cam;
-            (_camera.position,_camera.target) = Tools.Collision(_oldpos, _camera.position, _oldtarget,_camera.target,_maze);
+            (_camera.position, _camera.target) = Tools.Collision(_oldpos, _camera.position, _oldtarget, _camera.target, _maze);
             _oldpos = _camera.position;
             _oldtarget = _camera.target;
 
@@ -139,14 +171,10 @@ namespace MazeGame
             Raylib.DrawText(Raylib.GetFPS().ToString(), 12, 12, 20, Color.WHITE);
             Raylib.DrawText($"{index.Item1},{index.Item2}", 50, 12, 20, Color.WHITE);
             Raylib.DrawText($"{tiles}", 112, 12, 20, Color.WHITE);
-            for (var z = 0; z < _maze.GetLength(0); z++)
-                for (var x = 0; x < _maze.GetLength(1); x++)
-                {
-                    var dpos = new Vector2(x * 32f, z * 32f + 40f);
-                    Raylib.DrawTextureRec(_mazeblocks, _tileset[_maze[x, z]], dpos, Color.WHITE);
-                }
-            Raylib.DrawTextureRec(_mazeblocks, new Rectangle(0, 0, 32, 32),
-                new Vector2(index.Item1 * 32f, index.Item2 * 32f + 40f), Color.WHITE);
+            var startpos = Raylib.GetScreenWidth() / 2 - mazeTexture.texture.width / 2;
+
+            Raylib.DrawTextureEx(mazeTexture.texture,new Vector2(startpos, 0),0f,1f,new Color(255,255,255,128));
+            Raylib.DrawRectangle(startpos + index.Item1 * Blocksize, index.Item2 * Blocksize, Blocksize, Blocksize,Color.RED);
         }
 
         private (int, int) TileIndexFromCamera()
@@ -166,63 +194,90 @@ namespace MazeGame
 
         private int DrawLevel()
         {
-            var tilesDrawn = 0;
-            Raylib.DrawModel(_start, new Vector3(0, 0, 0), Scale, Tint);
-            Raylib.DrawModel(_exit, new Vector3(-9, 0, -9), Scale, Tint);
+            Raylib.DrawModel(_transit, new Vector3(0, 0, 0), Scale, Tint);
+            Raylib.DrawModel(_transit, new Vector3(Exitpos, 1, Exitpos), Scale, Tint);
             var index = TileIndexFromCamera();
-            Checkvisibility(index.Item1, index.Item2, Directions.Undefined, 0, ref tilesDrawn);
+            var cd = DirectionsFromCamera().ToArray();
 
-            Raylib.DrawSphere(_camera.position + Vector3.Normalize(_camera.target - _camera.position) * .1f, .001f, Color.WHITE);
+            var drawList = new List<Tuple<int, int>>();
+            var tilesDrawn = Checkvisibility(index.Item1, index.Item2, Directions.Undefined, cd, 0,ref drawList);
+
+            foreach (var tup in drawList)
+            {
+                DrawTile(tup.Item1, tup.Item2);
+            }
+            Rlgl.rlDisableDepthMask();
+            Raylib.BeginBlendMode(BlendMode.BLEND_ADDITIVE);
+            foreach (var tup in drawList.Where(elem => _randoms[elem.Item1,elem.Item2] < 10))
+            {
+                Raylib.DrawModel(_spiderweb, new Vector3(-tup.Item1, 0, -tup.Item2), Scale, Tint);
+            }
+            Raylib.EndBlendMode();
+            Rlgl.rlEnableDepthMask();
+
+            if (_displayOverlay)
+                Raylib.DrawSphere(_camera.position + Vector3.Normalize(_camera.target - _camera.position) * .1f, .001f, Color.WHITE);
             return tilesDrawn;
         }
 
-        private void Checkvisibility(int x, int z, Directions old, int depth, ref int tilesDrawn)
+        private int Checkvisibility(int x, int z, Directions old, Directions[] cd, int depth,ref List<Tuple<int,int>> drawList)
         {
-            if (depth > 7)
-                return;
+            drawList.Add(Tuple.Create(x,z));
             depth++;
-            tilesDrawn++;
-            var dpos = new Vector3(-x, 0, -z);
-            if (_wireframe)
-            {
-                Raylib.DrawModelWires(_parts[_maze[x, z]], dpos, Scale, Tint);
-                Raylib.DrawModelWires(_mud, dpos, Scale, Tint);
-                Raylib.DrawModelWires(_moss, dpos, Scale, Tint);
-            }
-            else
-            {
-                Raylib.DrawModel(_parts[_maze[x, z]], dpos, Scale, Tint);
-                Raylib.DrawModel(_mud, dpos, Scale, Tint);
-                Raylib.DrawModel(_moss, dpos, Scale, Tint);
-            }
+            var tilesDrawn = 1;
+            if (depth > Maxdepth)
+                return tilesDrawn;
 
-            var cd = DirectionsFromCamera();
             var directions = MazeGenerator.DirectionsFromblock(_maze[x, z])
-                .Except(new[] { MazeGenerator.Opposite(old) }).Where(dir => cd.Contains(dir));
+                .Except(new[] { MazeGenerator.Opposite(old) });
             foreach (var direction in directions)
             {
+                var percievedDepth = cd.Contains(direction) ? depth : Maxdepth;
+
                 var cx = x + MazeGenerator.Dx(direction);
                 var cy = z + MazeGenerator.Dy(direction);
 
                 if (0 > cx || cx >= _maze.GetLength(0)
                  || 0 > cy || cy >= _maze.GetLength(1))
                     continue;
-                Checkvisibility(cx, cy, direction, depth, ref tilesDrawn);
+                tilesDrawn += Checkvisibility(cx, cy, direction, cd, percievedDepth, ref drawList);
+            }
+
+            return tilesDrawn;
+        }
+
+        private void DrawTile(int x, int z)
+        {
+            var dpos = new Vector3(-x, 0, -z);
+            if (_wireframe)
+            {
+                Raylib.DrawModelWires(_parts[_maze[x, z]], dpos, Scale, Tint);
+                Raylib.DrawModelWires(_mud, dpos, Scale, Tint);
+                Raylib.DrawModelWires(_moss, dpos, Scale, Tint);
+                //only draw when shifting
+                //Raylib.DrawModelWires(_wall, dpos, Scale, Tint);
+            }
+            else
+            {
+                Raylib.DrawModel(_parts[_maze[x, z]], dpos, Scale, Tint);
+                Raylib.DrawModel(_mud, dpos, Scale, Tint);
+                Raylib.DrawModel(_moss, dpos, Scale, Tint);
+                //only draw when shifting
+                //Raylib.DrawModel(_wall, dpos, Scale, Tint);
             }
         }
 
         public void Dispose()
         {
-            Raylib.UnloadModel(_exit);
-            foreach (var part in _parts.Values)
-                Raylib.UnloadModel(part);
-            Raylib.UnloadModel(_mud);
-            Raylib.UnloadShader(_shader);
+
+            foreach (var model in _models)
+                Raylib.UnloadModel(model);
 
             foreach (var texture in _textures.SelectMany(t => t.Value.Values))
-            {
                 Raylib.UnloadTexture(texture);
-            }
+
+            Raylib.UnloadTexture(_mazeblocks);
+            Raylib.UnloadRenderTexture(mazeTexture);
         }
     }
 }

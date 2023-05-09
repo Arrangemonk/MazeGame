@@ -9,21 +9,19 @@ using System.Threading.Tasks;
 using System.Xml.XPath;
 using MazeGame.Algorithms;
 using Raylib_cs;
-using static Raylib_cs.Raylib;
 
 namespace MazeGame.Common
 {
 
     public class Tools
     {
-        public static Color ColorFromFloat(float r, float g, float b,float a)
+        public static Color ColorFromFloat(float r, float g, float b, float a)
         {
             return new Color((int)(r * 255f), (int)(g * 255f), (int)(b * 255f), (int)(a * 255f));
         }
 
         public const float Pi = (float)Math.PI;
-        public static TextureFilter Filter = TextureFilter.TEXTURE_FILTER_ANISOTROPIC_4X;
-        public static (Vector3,Vector3) Collision(Vector3 oldpos, Vector3 newpos,Vector3 oldTarget,Vector3 newTarget, Blocks[,] maze)
+        public static (Vector3, Vector3) Collision(Vector3 oldpos, Vector3 newpos, Vector3 oldTarget, Vector3 newTarget, Blocks[,] maze)
         {
             const float high = short.MaxValue - .5f;
 
@@ -93,10 +91,10 @@ namespace MazeGame.Common
             var canmovez = (rectc || recdb);
 
 
-            return canmoveboth ? (newpos,newTarget) : 
-                canmovex ? (new Vector3(newpos.X, newpos.Y, oldpos.Z), new Vector3(newTarget.X, newTarget.Y, oldTarget.Z)) : 
-                canmovez ? (new Vector3(oldpos.X, newpos.Y, newpos.Z), new Vector3(oldTarget.X, newTarget.Y, newTarget.Z)) : 
-                (oldpos,oldTarget);
+            return canmoveboth ? (newpos, newTarget) :
+                canmovex ? (new Vector3(newpos.X, newpos.Y, oldpos.Z), new Vector3(newTarget.X, newTarget.Y, oldTarget.Z)) :
+                canmovez ? (new Vector3(oldpos.X, newpos.Y, newpos.Z), new Vector3(oldTarget.X, newTarget.Y, newTarget.Z)) :
+                (oldpos, oldTarget);
 
         }
 
@@ -119,35 +117,25 @@ namespace MazeGame.Common
 
 
 
-        public static Model PrepareModel(string modelName, string textureName, Shader shader, Matrix4x4 transform, ref Dictionary<string, Dictionary<string, Texture2D>> textures)
+        public static Model PrepareModel(string modelName, string textureName, Shader shader, Matrix4x4 transform, ref Dictionary<string, Dictionary<string, Texture2D>> textures,ref List<Model> models)
         {
             unsafe
             {
-                const string path = "resources/textures/{0}_{1}.{2}";
-                const string diff = "diff";
-                const string normal = "normal";
-                const string spec = "spec";
+                const string diff = nameof(diff);
+                const string normal = nameof(normal);
+                const string spec = nameof(spec);
 
-                var model = LoadModel($"resources/models/{modelName}.obj");
+                var model = Raylib.LoadModel($"resources/models/{modelName}.obj");
+                models.Add(model);
 
                 Texture2D d, n, s;
 
                 if (!textures.ContainsKey(textureName))
                 {
                     var texture = new Dictionary<string, Texture2D>();
-
-                    d = LoadTexture(string.Format(path, textureName, diff,"dds"));
-                    GenTextureMipmaps(ref d);
-                    SetTextureFilter(d, Filter);
-                    n = LoadTexture(string.Format(path, textureName, normal, "dds"));
-                    GenTextureMipmaps(ref n);
-                    SetTextureFilter(n, Filter);
-                    s = LoadTexture(string.Format(path, textureName, spec, "dds"));
-                    GenTextureMipmaps(ref s);
-                    SetTextureFilter(s, Filter);
-                    texture.Add(diff, d);
-                    texture.Add(normal, n);
-                    texture.Add(spec, s);
+                    d = MountTexture(textureName, diff, ref texture);
+                    n = MountTexture(textureName, normal, ref texture);
+                    s = MountTexture(textureName, spec, ref texture);
                     textures.Add(textureName, texture);
                 }
                 else
@@ -162,19 +150,29 @@ namespace MazeGame.Common
                 model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_NORMAL].texture = n;
                 model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_SPECULAR].texture = s;
 
-                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = GetShaderLocation(shader, "diffuse");
-                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = GetShaderLocation(shader, "specular");
-                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = GetShaderLocation(shader, "normalMap");
+                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = Raylib.GetShaderLocation(shader, "diffuse");
+                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = Raylib.GetShaderLocation(shader, "specular");
+                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = Raylib.GetShaderLocation(shader, "normalMap");
                 model.materials[0].shader = shader;
                 model.transform = transform;
-                GenMeshTangents(model.meshes);
+                Raylib.GenMeshTangents(model.meshes);
                 return model;
             }
         }
 
+        private static Texture2D MountTexture(string textureName, string type, ref Dictionary<string, Texture2D> textures)
+        {
+            const string path = "resources/textures/{0}_{1}.{2}";
+            var texture = Raylib.LoadTexture(string.Format(path, textureName, type, "dds"));
+            Raylib.GenTextureMipmaps(ref texture);
+            Raylib.SetTextureFilter(texture, TextureFilter.TEXTURE_FILTER_TRILINEAR);
+            textures.Add(type, texture);
+            return texture;
+        }
+
         public static Shader PrepareShader()
         {
-            return LoadShader("resources/shaders/normal_mapping.vs", "resources/shaders/normal_mapping.fs");
+            return Raylib.LoadShader("resources/shaders/normal_mapping.vs", "resources/shaders/normal_mapping.fs");
         }
 
         public static Camera3D CameraSetup()

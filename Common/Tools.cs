@@ -38,10 +38,10 @@ namespace MazeGame.Common
             var minD = 1.0f - Range(false);
             var maxD = Range(false);
 
-            var minX = 1.0f - Range(((int)tile & (int)Directions.East) != 0);
-            var maxX = Range(((int)tile & (int)Directions.West) != 0);
-            var minZ = 1.0f - Range(((int)tile & (int)Directions.North) != 0);
-            var maxZ = Range(((int)tile & (int)Directions.South) != 0);
+            var minX = 1.0f - Range(tile >= Blocks.Room || ((int)tile & (int)Directions.East) != 0);
+            var maxX = Range(tile >= Blocks.Room || ((int)tile & (int)Directions.West) != 0);
+            var minZ = 1.0f - Range(tile >= Blocks.Room || ((int)tile & (int)Directions.North) != 0);
+            var maxZ = Range(tile >= Blocks.Room || ((int)tile & (int)Directions.South) != 0);
 
             var recta = (
                 x >= minX &&
@@ -170,9 +170,21 @@ namespace MazeGame.Common
             return texture;
         }
 
-        public static Shader PrepareShader()
+        public static Dictionary<string,Shader> PrepareShader()
         {
-            return Raylib.LoadShader("resources/shaders/normal_mapping.vs", "resources/shaders/normal_mapping.fs");
+            var result = new Dictionary<string,Shader>();
+            LoadIfExists(result, "normal_mapping");
+            LoadIfExists(result,"geom");
+            // result.Add("geom");
+
+            return result;
+        }
+
+        private static void LoadIfExists(Dictionary<string, Shader> result,string name)
+        {
+            const string path = "resources/shaders/";
+            if (File.Exists($"{path}{name}.vs"))
+                result.Add(name, Raylib.LoadShader($"{path}{name}.vs", $"{path}{name}.fs"));
         }
 
         public static Camera3D CameraSetup()

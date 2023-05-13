@@ -22,12 +22,9 @@
     <None Remove="resources\models\corner.obj" />
     <None Remove="resources\models\cross.obj" />
     <None Remove="resources\models\end.obj" />
-    <None Remove="resources\models\exit.obj" />
-    <None Remove="resources\models\exit_open.obj" />
     <None Remove="resources\models\floor.obj" />
     <None Remove="resources\models\moss.obj" />
     <None Remove="resources\models\stairs.obj" />
-    <None Remove="resources\models\start.obj" />
     <None Remove="resources\models\straight.obj" />
     <None Remove="resources\models\tcross.obj" />
     <None Remove="resources\models\wall.obj" />
@@ -59,9 +56,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="resources\mazeblocks_32.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="resources\mazeblocks_4.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -80,12 +74,6 @@
     <Content Include="resources\models\end.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="resources\models\exit.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\models\exit_open.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="resources\models\floor.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -93,9 +81,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\models\stairs.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\models\start.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\models\straight.obj">
@@ -174,6 +159,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="resources\mazeblocks_16.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\mazeblocks_minimal.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\models\room.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="resources\models\spiderweb.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

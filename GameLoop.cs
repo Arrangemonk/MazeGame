@@ -210,13 +210,14 @@ namespace MazeGame
 
             var drawList = new List<Tuple<int, int>>();
             var tilesDrawn = Checkvisibility(index.Item1, index.Item2, Directions.Undefined, cd, 0,ref drawList);
+            drawList = drawList.Distinct().ToList();
 
             foreach (var tup in drawList)
             {
                 DrawTile(tup.Item1, tup.Item2);
             }
             Rlgl.rlDisableDepthMask();
-            Raylib.BeginBlendMode(BlendMode.BLEND_ADDITIVE);
+            Raylib.BeginBlendMode(BlendMode.BLEND_ADD_COLORS);
             foreach (var tup in drawList.Where(elem => _randoms[elem.Item1,elem.Item2] < 10 && _maze[elem.Item1, elem.Item2] < Blocks.Room))
             {
                 Raylib.DrawModel(_spiderweb, new Vector3(-tup.Item1, 0, -tup.Item2), Scale, Tint);

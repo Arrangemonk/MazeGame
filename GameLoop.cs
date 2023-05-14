@@ -208,15 +208,15 @@ namespace MazeGame
             var index = TileIndexFromCamera();
             var cd = DirectionsFromCamera().ToArray();
 
-            var drawList = new List<Tuple<int, int>>();
-            var tilesDrawn = Checkvisibility(index.Item1, index.Item2, Directions.Undefined, cd, 0,ref drawList);
+            var drawList = new HashSet<Tuple<int, int>>();
+            Checkvisibility(index.Item1, index.Item2, Directions.Undefined, cd, 0,ref drawList);
 
             foreach (var tup in drawList)
             {
                 DrawTile(tup.Item1, tup.Item2);
             }
             Rlgl.rlDisableDepthMask();
-            Raylib.BeginBlendMode(BlendMode.BLEND_ADDITIVE);
+            Raylib.BeginBlendMode(BlendMode.BLEND_ADD_COLORS);
             foreach (var tup in drawList.Where(elem => _randoms[elem.Item1,elem.Item2] < 10 && _maze[elem.Item1, elem.Item2] < Blocks.Room))
             {
                 Raylib.DrawModel(_spiderweb, new Vector3(-tup.Item1, 0, -tup.Item2), Scale, Tint);
@@ -226,18 +226,17 @@ namespace MazeGame
 
             if (_displayOverlay)
                 Raylib.DrawSphere(_camera.position + Vector3.Normalize(_camera.target - _camera.position) * .1f, .001f, Color.WHITE);
-            return tilesDrawn;
+            return drawList.Count;
         }
 
-        private int Checkvisibility(int x, int z, Directions old, Directions[] cd, int depth,ref List<Tuple<int,int>> drawList)
+        private void Checkvisibility(int x, int z, Directions old, Directions[] cd, int depth,ref HashSet<Tuple<int,int>> drawList)
         {
 
             drawList.Add(Tuple.Create(x,z));
-            var tilesDrawn = 1;
             //if (_maze[x,z] < Blocks.Room)
                 depth++;
-            if (depth > Maxdepth)
-                return tilesDrawn;
+                if (depth > Maxdepth)
+                    return;
 
             var directions = MazeGenerator.DirectionsFromblock(_maze[x, z])
                 .Except(new[] { MazeGenerator.Opposite(old) });
@@ -251,10 +250,8 @@ namespace MazeGame
                 if (0 > cx || cx >= _maze.GetLength(0)
                  || 0 > cy || cy >= _maze.GetLength(1))
                     continue;
-                tilesDrawn += Checkvisibility(cx, cy, direction, cd, percievedDepth, ref drawList);
+                Checkvisibility(cx, cy, direction, cd, percievedDepth, ref drawList);
             }
-
-            return tilesDrawn;
         }
 
         private void DrawTile(int x, int z)

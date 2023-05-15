@@ -87,8 +87,8 @@ namespace MazeGame.Algorithms
             {
                 var posx = Rng.Next(1, mazewidth - 1);
                 var posy = Rng.Next(1, mazeheight -1);
-                var width = Rng.Next(2, maxamount);
-                var height = Rng.Next(2, maxamount);
+                var width = Rng.Next(Math.Min(2,maxamount), Math.Max(2, maxamount));
+                var height = Rng.Next(Math.Min(2, maxamount), Math.Max(2, maxamount));
                 for (var x = 0; x < width; x++)
                 {
                     for (var y = 0; y < height; y++)

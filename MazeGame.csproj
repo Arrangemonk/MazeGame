@@ -28,8 +28,8 @@
     <None Remove="resources\models\straight.obj" />
     <None Remove="resources\models\tcross.obj" />
     <None Remove="resources\models\wall.obj" />
-    <None Remove="resources\shaders\normal_mapping.fs" />
-    <None Remove="resources\shaders\normal_mapping.vs" />
+    <None Remove="resources\shaders\normal_mapping.fs.glsl" />
+    <None Remove="resources\shaders\normal_mapping.vs.glsl" />
     <None Remove="resources\textures\exit_diff.dds" />
     <None Remove="resources\textures\exit_disp.dds" />
     <None Remove="resources\textures\exit_normal.dds" />
@@ -125,10 +125,10 @@
     <Content Include="resources\textures\pipe_spec.dds">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="resources\shaders\normal_mapping.fs">
+    <Content Include="resources\shaders\normal_mapping.fs.glsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="resources\shaders\normal_mapping.vs">
+    <Content Include="resources\shaders\normal_mapping.vs.glsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\textures\spiderweb_diff.dds">

@@ -21,42 +21,28 @@ namespace MazeGame.Common
         }
 
         public const float Pi = (float)Math.PI;
-        public static (Vector3, Vector3) Collision(Vector3 oldpos, Vector3 newpos, Vector3 oldTarget, Vector3 newTarget, Blocks[,] maze)
+        public static (Vector3, Vector3) Collision(Vector3 oldPos, Vector3 newPos, Vector3 oldTgt, Vector3 newTgt, Blocks[,] maze)
         {
             const float high = short.MaxValue - .5f;
 
-            var tile = GetBoundarysFromMaze((int)(newpos.X - .5f), (int)(newpos.Z - .5f), maze);
+            var tile = GetBoundarysFromMaze((int)(newPos.X - .5f), (int)(newPos.Z - .5f), maze);
 
             //clamp to range 0 to 1 but offsett by .5
+            var isRoom = tile >= Blocks.Room;
 
-            var oldx = (-oldpos.X + high) % 1.0f;
-            var oldz = (-oldpos.Z + high) % 1.0f;
+            var oldx = (-oldPos.X + high) % 1.0f;
+            var oldz = (-oldPos.Z + high) % 1.0f;
 
-            var x = (-newpos.X + high) % 1.0f;
-            var z = (-newpos.Z + high) % 1.0f;
+            var x = (-newPos.X + high) % 1.0f;
+            var z = (-newPos.Z + high) % 1.0f;
 
-            var minD = 1.0f - Range(false);
-            var maxD = Range(false);
+            var minD = 1.0f - Range(isRoom);
+            var maxD = Range(isRoom);
 
-            var minX = 1.0f - Range(tile >= Blocks.Room || ((int)tile & (int)Directions.East) != 0);
-            var maxX = Range(tile >= Blocks.Room || ((int)tile & (int)Directions.West) != 0);
-            var minZ = 1.0f - Range(tile >= Blocks.Room || ((int)tile & (int)Directions.North) != 0);
-            var maxZ = Range(tile >= Blocks.Room || ((int)tile & (int)Directions.South) != 0);
-
-            var recta = (
-                x >= minX &&
-                x <= maxX &&
-                z >= minD &&
-                z <= maxD
-            );
-
-            var rectb = (
-                x >= minD &&
-                x <= maxD &&
-                z >= minZ &&
-                z <= maxZ
-            );
-
+            var minX = 1.0f - Range(isRoom || ((int)tile & (int)Directions.East) != 0);
+            var maxX = Range(isRoom || ((int)tile & (int)Directions.West) != 0);
+            var minZ = 1.0f - Range(isRoom || ((int)tile & (int)Directions.North) != 0);
+            var maxZ = Range(isRoom || ((int)tile & (int)Directions.South) != 0);
 
             var rectc = (
                 oldx >= minX &&
@@ -86,15 +72,17 @@ namespace MazeGame.Common
                 oldz <= maxZ
             );
 
-            var canmoveboth = (recta || rectb);
-            var canmovex = (recte || rectf);
-            var canmovez = (rectc || recdb);
+            var canMoveX = (recte || rectf);
+            var canMoveZ = (rectc || recdb);
 
 
-            return canmoveboth ? (newpos, newTarget) :
-                canmovex ? (new Vector3(newpos.X, newpos.Y, oldpos.Z), new Vector3(newTarget.X, newTarget.Y, oldTarget.Z)) :
-                canmovez ? (new Vector3(oldpos.X, newpos.Y, newpos.Z), new Vector3(oldTarget.X, newTarget.Y, newTarget.Z)) :
-                (oldpos, oldTarget);
+
+            return (new Vector3(canMoveX ? newPos.X : oldPos.X,
+                        newPos.Y, 
+                        canMoveZ ? newPos.Z : oldPos.Z),
+                new Vector3(canMoveX ? newTgt.X : oldTgt.X,
+                    newTgt.Y,
+                    canMoveZ ? newTgt.Z : oldTgt.Z));
 
         }
 
@@ -183,8 +171,8 @@ namespace MazeGame.Common
         private static void LoadIfExists(Dictionary<string, Shader> result,string name)
         {
             const string path = "resources/shaders/";
-            if (File.Exists($"{path}{name}.vs"))
-                result.Add(name, Raylib.LoadShader($"{path}{name}.vs", $"{path}{name}.fs"));
+            if (File.Exists($"{path}{name}.vs.glsl"))
+                result.Add(name, Raylib.LoadShader($"{path}{name}.vs.glsl", $"{path}{name}.fs.glsl"));
         }
 
         public static Camera3D CameraSetup()

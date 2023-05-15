@@ -72,9 +72,6 @@ namespace MazeGame
             _lightPosLoc = Raylib.GetShaderLocation(_shader["normal_mapping"], "lightPos");
             //specular light
             _specularPosLoc = Raylib.GetShaderLocation(_shader["normal_mapping"], "viewPos");
-
-            _oldpos = _camera.position;
-            _oldtarget = _camera.target;
             Raylib.DisableCursor();
 
             PrepareMazeTexture();
@@ -146,29 +143,34 @@ namespace MazeGame
         private void UpdateCamera()
         {
 
-            float cameraMoveSpeed = 0.03f * Tickscale;
-            float cameraMouseMoveSensitivity = 0.003f * Tickscale;
+            const float cameraMoveSpeed = 0.03f * Tickscale;
+            const float cameraMouseMoveSensitivity = 0.003f * Tickscale;
 
-            Vector2 mousePositionDelta = Raylib.GetMouseDelta();
-            Camera3D cam = _camera;
+            var mousePositionDelta = Raylib.GetMouseDelta();
+            var cam = _camera;
             unsafe
             {
-                Raylib.CameraYaw(&cam, -mousePositionDelta.X * cameraMouseMoveSensitivity, false);
-                Raylib.CameraPitch(&cam, -mousePositionDelta.Y * cameraMouseMoveSensitivity, false, false, false);
 
                 if (Raylib.IsKeyDown(KeyboardKey.KEY_W)) Raylib.CameraMoveForward(&cam, cameraMoveSpeed, true);
                 if (Raylib.IsKeyDown(KeyboardKey.KEY_A)) Raylib.CameraMoveRight(&cam, -cameraMoveSpeed, true);
                 if (Raylib.IsKeyDown(KeyboardKey.KEY_S)) Raylib.CameraMoveForward(&cam, -cameraMoveSpeed, true);
                 if (Raylib.IsKeyDown(KeyboardKey.KEY_D)) Raylib.CameraMoveRight(&cam, cameraMoveSpeed, true);
+
+                (cam.position, cam.target) = Tools.Collision(_oldpos, cam.position, _oldtarget, cam.target, _maze);
+
+                Raylib.CameraYaw(&cam, -mousePositionDelta.X * cameraMouseMoveSensitivity, false);
+                Raylib.CameraPitch(&cam, -mousePositionDelta.Y * cameraMouseMoveSensitivity, true, false, false);
+
+                _oldpos = cam.position;
+                _oldtarget = cam.target;
+
+                Raylib.SetShaderValue(_shader["normal_mapping"], _lightPosLoc, cam.position + Vector3.Normalize(cam.target - cam.position) * .1f, ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+                Raylib.SetShaderValue(_shader["normal_mapping"], _specularPosLoc, cam.position, ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+
             }
 
             _camera = cam;
-            (_camera.position, _camera.target) = Tools.Collision(_oldpos, _camera.position, _oldtarget, _camera.target, _maze);
-            _oldpos = _camera.position;
-            _oldtarget = _camera.target;
 
-            Raylib.SetShaderValue(_shader["normal_mapping"], _lightPosLoc, _camera.position + Vector3.Normalize(_camera.target - _camera.position) * .1f, ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Raylib.SetShaderValue(_shader["normal_mapping"], _specularPosLoc, _camera.position, ShaderUniformDataType.SHADER_UNIFORM_VEC3);
         }
 
         private void DrawMazeOverlay(int tiles)

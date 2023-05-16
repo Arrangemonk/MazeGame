@@ -52,9 +52,9 @@ namespace MazeGame.Algorithms
         public static int[,] GenerateRandomIntegers(int rows, int cols)
         {
             var result = new int[rows, cols];
-            for(var x = 0; x < cols; x++)
-            for (var y = 0; y < rows; y++)
-                result[x, y] = Rng.Next(0, 100);
+            for (var x = 0; x < cols; x++)
+                for (var y = 0; y < rows; y++)
+                    result[x, y] = Rng.Next(0, 100);
             return result;
         }
 
@@ -72,29 +72,29 @@ namespace MazeGame.Algorithms
                 y = Rng.Next(0, cols - 1);
             }
 
-            CarvePassagesFromIterative(x,y,ref maze);
+            CarvePassagesFromIterative(x, y, ref maze);
             return maze;
         }
 
         private static void CarveRooms(ref Blocks[,] maze)
         {
-            var mazewidth = maze.GetLength(0);
-            var mazeheight = maze.GetLength(1);
+            var mazewidth = GameLoop.Mazesize;
+            var mazeheight = GameLoop.Mazesize;
 
-            var maxamount = (int)Math.Sqrt(mazewidth * mazeheight)/10;
-            var amount = Rng.Next(maxamount * 3, maxamount * 10);
+            var maxamount = (int)(Math.Sqrt(mazewidth + mazeheight));
+            var amount = Rng.Next(maxamount, maxamount * 5);
             for (var i = 0; i < amount; i++)
             {
                 var posx = Rng.Next(1, mazewidth - 1);
-                var posy = Rng.Next(1, mazeheight -1);
-                var width = Rng.Next(Math.Min(2,maxamount), Math.Max(2, maxamount));
-                var height = Rng.Next(Math.Min(2, maxamount), Math.Max(2, maxamount));
+                var posy = Rng.Next(1, mazeheight - 1);
+                var width = Rng.Next(Math.Min(2, maxamount / 2), Math.Max(2, maxamount / 2));
+                var height = Rng.Next(Math.Min(2, maxamount / 2), Math.Max(2, maxamount / 2));
                 for (var x = 0; x < width; x++)
                 {
                     for (var y = 0; y < height; y++)
                     {
-                        var carvex = Math.Min(posx + x, mazewidth - 2);
-                        var carvey = Math.Min(posy + y, mazeheight - 2);
+                        var carvex = Tools.Clamp(posx + x, mazewidth);
+                        var carvey = Tools.Clamp(posy + y, mazeheight);
 
                         maze[carvex, carvey] = Blocks.Room;
                     }
@@ -102,7 +102,8 @@ namespace MazeGame.Algorithms
             }
         }
 
-        private static void CarvePassagesFrom(int x, int y,ref Blocks[,] grid)
+
+        private static void CarvePassagesFrom(int x, int y, ref Blocks[,] grid)
         {
             var directions = ValidDirections.OrderBy(e => Rng.Next());
 
@@ -110,13 +111,13 @@ namespace MazeGame.Algorithms
             {
                 var cx = x + Dx(dir);
                 var cy = y + Dy(dir);
-                if (0 > cx || cx >= grid.GetLength(0)
-                           || 0 > cy || cy >= grid.GetLength(1)
+                if (0 > cx || cx >= GameLoop.Mazesize
+                           || 0 > cy || cy >= GameLoop.Mazesize
                            || grid[cx, cy] != Blocks.Undefined)
                     continue;
                 grid[x, y] = (Blocks)((int)dir + (int)grid[x, y]);
                 grid[cx, cy] = (Blocks)Opposite(dir);
-                CarvePassagesFrom(cx, cy,ref grid);
+                CarvePassagesFrom(cx, cy, ref grid);
             }
         }
 
@@ -135,18 +136,19 @@ namespace MazeGame.Algorithms
 
                 foreach (var dir in directions)
                 {
-                    var cx = x + Dx(dir);
-                    var cy = y + Dy(dir);
-                    if (0 > cx || cx >= grid.GetLength(0) ||
-                        0 > cy || cy >= grid.GetLength(1) ||
-                        !new[] { Blocks.Undefined , Blocks.Room }.Contains(grid[cx, cy]))
+                    var cx = Tools.Clamp(x + Dx(dir), GameLoop.Mazesize);
+                    var cy = Tools.Clamp(y + Dy(dir), GameLoop.Mazesize);
+                    if (
+                        //0 > cx || cx >= GameLoop.Mazesize ||
+                        //0 > cy || cy >= GameLoop.Mazesize ||
+                        !new[] { Blocks.Undefined, Blocks.Room }.Contains(grid[cx, cy]))
                         continue;
 
                     grid[x, y] = (Blocks)((int)dir + (int)grid[x, y]);
                     if (grid[cx, cy] == Blocks.Room)
                     {
                         grid[cx, cy] = Blocks.RoomBlocked;
-                        FillRoom(cx, cy, ref grid,0);
+                        FillRoom(cx, cy, ref grid, 0);
                         continue;
                     }
                     grid[cx, cy] = (Blocks)Opposite(dir);
@@ -165,18 +167,20 @@ namespace MazeGame.Algorithms
             }
         }
 
-        private static void FillRoom(int x, int y, ref Blocks[,] grid,int depth)
+        private static void FillRoom(int x, int y, ref Blocks[,] grid, int depth)
         {
             if (depth > 2)
                 return;
             depth++;
             foreach (var dir in ValidDirections)
             {
-                var cx = x + Dx(dir);
-                var cy = y + Dy(dir);
-                if (0 > cx || cx >= grid.GetLength(0)
-                           || 0 > cy || cy >= grid.GetLength(1)
-                           || grid[cx, cy] != Blocks.Room)
+                var cx = Tools.Clamp(x + Dx(dir), GameLoop.Mazesize);
+                var cy = Tools.Clamp(y + Dy(dir), GameLoop.Mazesize);
+                if (
+                //0 > cx || cx >= GameLoop.Mazesize
+                //       || 0 > cy || cy >= GameLoop.Mazesize
+                //    || 
+                grid[cx, cy] != Blocks.Room)
                     continue;
                 grid[cx, cy] = Blocks.RoomBlocked;
                 FillRoom(cx, cy, ref grid, depth);
@@ -186,15 +190,15 @@ namespace MazeGame.Algorithms
         public static IEnumerable<Directions> Dirx(float x)
         {
             x = (float)Math.Round(x * 2, MidpointRounding.AwayFromZero);
-            return x > 0 ? new[] { Directions.East } :
-                x < 0 ? new[] { Directions.West } : new[] { Directions.East, Directions.West };
+            return x < 0 ? new[] { Directions.East } :
+                x > 0 ? new[] { Directions.West } : new[] { Directions.East, Directions.West };
         }
 
         public static IEnumerable<Directions> Diry(float y)
         {
             y = (float)Math.Round(y * 2, MidpointRounding.AwayFromZero);
-            return y > 0 ? new[] { Directions.North } :
-                y < 0 ? new[] { Directions.South } : new[] { Directions.North, Directions.South };
+            return y < 0 ? new[] { Directions.North } :
+                y > 0 ? new[] { Directions.South } : new[] { Directions.North, Directions.South };
         }
 
 
@@ -241,7 +245,7 @@ namespace MazeGame.Algorithms
         }
 
         public static Dictionary<Blocks, Model> PrepareMazeParts(Shader shader,
-            ref Dictionary<string, Dictionary<string, Texture2D>> textures,ref List<Model> models)
+            ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref List<Model> models)
         {
             var rot000 = Matrix4x4.Identity;
             var rot090 = Matrix4x4.CreateRotationY(Tools.Pi * .5f);
@@ -259,20 +263,20 @@ namespace MazeGame.Algorithms
             {
                 { Blocks.Horizontal, Tools.PrepareModel(straight, pipe, shader, rot090, ref textures,ref models) },
                 { Blocks.Vertical, Tools.PrepareModel(straight, pipe, shader, rot000, ref textures, ref models) },
-                { Blocks.CornerNorhEast, Tools.PrepareModel(corner, pipe, shader, rot000, ref textures, ref models) },
-                { Blocks.CornerNorthWest, Tools.PrepareModel(corner, pipe, shader, rot090, ref textures, ref models) },
-                { Blocks.CornderSouthEast, Tools.PrepareModel(corner, pipe, shader, rot270, ref textures, ref models) },
-                { Blocks.CornerSouthWest, Tools.PrepareModel(corner, pipe, shader, rot180, ref textures, ref models) },
-                { Blocks.TcrossHorizontalNorth, Tools.PrepareModel(tcross, pipe, shader, rot000, ref textures, ref models) },
-                { Blocks.TcrossHorizontalSouth, Tools.PrepareModel(tcross, pipe, shader, rot180, ref textures, ref models) },
-                { Blocks.TcrossVerticalEast, Tools.PrepareModel(tcross, pipe, shader, rot270, ref textures, ref models) },
-                { Blocks.TcrossVerticalWest, Tools.PrepareModel(tcross, pipe, shader, rot090, ref textures, ref models) },
-                { Blocks.EndNorth, Tools.PrepareModel(end, pipe, shader, rot000, ref textures, ref models) },
-                { Blocks.EndSouth, Tools.PrepareModel(end, pipe, shader, rot180, ref textures, ref models) },
-                { Blocks.EndEast, Tools.PrepareModel(end, pipe, shader, rot270, ref textures, ref models) },
-                { Blocks.EndWest, Tools.PrepareModel(end, pipe, shader, rot090, ref textures, ref models) },
-                { Blocks.Cross, Tools.PrepareModel(cross, pipe, shader, rot000, ref textures, ref models) },
-                { Blocks.Undefined,  Tools.PrepareModel(room, pipe, shader, rot000, ref textures, ref models) },
+                { Blocks.CornerNorhEast, Tools.PrepareModel(corner, pipe, shader, rot180, ref textures, ref models) },
+                { Blocks.CornerNorthWest, Tools.PrepareModel(corner, pipe, shader, rot270, ref textures, ref models) },
+                { Blocks.CornderSouthEast, Tools.PrepareModel(corner, pipe, shader, rot090, ref textures, ref models) },
+                { Blocks.CornerSouthWest, Tools.PrepareModel(corner, pipe, shader, rot000, ref textures, ref models) },
+                { Blocks.TcrossHorizontalNorth, Tools.PrepareModel(tcross, pipe, shader, rot180, ref textures, ref models) },
+                { Blocks.TcrossHorizontalSouth, Tools.PrepareModel(tcross, pipe, shader, rot000, ref textures, ref models) },
+                { Blocks.TcrossVerticalEast, Tools.PrepareModel(tcross, pipe, shader, rot090, ref textures, ref models) },
+                { Blocks.TcrossVerticalWest, Tools.PrepareModel(tcross, pipe, shader, rot270, ref textures, ref models) },
+                { Blocks.EndNorth, Tools.PrepareModel(end, pipe, shader, rot180, ref textures, ref models) },
+                { Blocks.EndSouth, Tools.PrepareModel(end, pipe, shader, rot000, ref textures, ref models) },
+                { Blocks.EndEast, Tools.PrepareModel(end, pipe, shader, rot090, ref textures, ref models) },
+                { Blocks.EndWest, Tools.PrepareModel(end, pipe, shader, rot270, ref textures, ref models) },
+                { Blocks.Cross, Tools.PrepareModel(cross, pipe, shader, rot180, ref textures, ref models) },
+                { Blocks.Undefined,  Tools.PrepareModel(room, pipe, shader, rot180, ref textures, ref models) },
                 { Blocks.Room,  Tools.PrepareModel(room, pipe, shader, rot000, ref textures, ref models) },
                 { Blocks.RoomBlocked,  Tools.PrepareModel(room, pipe, shader, rot000, ref textures, ref models)}
             };

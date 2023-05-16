@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Xml.XPath;
 using MazeGame.Algorithms;
 using Raylib_cs;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace MazeGame.Common
 {
@@ -23,18 +24,22 @@ namespace MazeGame.Common
         public const float Pi = (float)Math.PI;
         public static (Vector3, Vector3) Collision(Vector3 oldPos, Vector3 newPos, Vector3 oldTgt, Vector3 newTgt, Blocks[,] maze)
         {
-            const float high = short.MaxValue - .5f;
+            float width = GameLoop.Mazesize;
+            float height = GameLoop.Mazesize;
 
-            var tile = GetBoundarysFromMaze((int)(newPos.X - .5f), (int)(newPos.Z - .5f), maze);
 
-            //clamp to range 0 to 1 but offsett by .5
+            var tx = Clamp(newPos.X, width);
+            var tz = Clamp(newPos.Z, height);
+
+            var tile = GetBoundarysFromMaze((int)(tx), (int)(tz), maze);
+
             var isRoom = tile >= Blocks.Room;
 
-            var oldx = (-oldPos.X + high) % 1.0f;
-            var oldz = (-oldPos.Z + high) % 1.0f;
+            var oldx = Clamp(oldPos.X, 1.0f);
+            var oldz = Clamp(oldPos.Z, 1.0f);
 
-            var x = (-newPos.X + high) % 1.0f;
-            var z = (-newPos.Z + high) % 1.0f;
+            var x = Clamp(tx, 1.0f);
+            var z = Clamp(tz, 1.0f);
 
             var minD = 1.0f - Range(isRoom);
             var maxD = Range(isRoom);
@@ -78,7 +83,7 @@ namespace MazeGame.Common
 
 
             return (new Vector3(canMoveX ? newPos.X : oldPos.X,
-                        newPos.Y, 
+                        newPos.Y,
                         canMoveZ ? newPos.Z : oldPos.Z),
                 new Vector3(canMoveX ? newTgt.X : oldTgt.X,
                     newTgt.Y,
@@ -86,26 +91,37 @@ namespace MazeGame.Common
 
         }
 
+        public static float Clamp(float input, float max)
+        {
+            return (((input) % max) + max) % max;
+        }
+
+        public static int Clamp(int input, int max)
+        {
+            return ((input % max) + max) % max;
+        }
+
+        public static Vector3 Clamp(Vector3 input, Vector3 max)
+        {
+            return new Vector3(Clamp(input.X, max.X), input.Y, Clamp(input.Z, max.Z));
+        }
+
         private static float Range(bool condiditon)
         {
-            return condiditon ? 2f : 0.8f;
+            return condiditon ? 3f : 0.8f;
         }
 
         public static Blocks GetBoundarysFromMaze(int x, int z, Blocks[,] maze)
         {
-            x = -x;
-            if (x < 0)
-                x = 0;
-            z = -z;
-            if (z < 0)
-                z = 0;
+            x = Clamp(x, GameLoop.Mazesize);
+            z = Clamp(z, GameLoop.Mazesize);
             return maze[x, z];
 
         }
 
 
 
-        public static Model PrepareModel(string modelName, string textureName, Shader shader, Matrix4x4 transform, ref Dictionary<string, Dictionary<string, Texture2D>> textures,ref List<Model> models)
+        public static Model PrepareModel(string modelName, string textureName, Shader shader, Matrix4x4 transform, ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref List<Model> models)
         {
             unsafe
             {
@@ -158,17 +174,17 @@ namespace MazeGame.Common
             return texture;
         }
 
-        public static Dictionary<string,Shader> PrepareShader()
+        public static Dictionary<string, Shader> PrepareShader()
         {
-            var result = new Dictionary<string,Shader>();
+            var result = new Dictionary<string, Shader>();
             LoadIfExists(result, "normal_mapping");
-            LoadIfExists(result,"geom");
+            LoadIfExists(result, "geom");
             // result.Add("geom");
 
             return result;
         }
 
-        private static void LoadIfExists(Dictionary<string, Shader> result,string name)
+        private static void LoadIfExists(Dictionary<string, Shader> result, string name)
         {
             const string path = "resources/shaders/";
             if (File.Exists($"{path}{name}.vs.glsl"))
@@ -179,9 +195,9 @@ namespace MazeGame.Common
         {
             return new Camera3D
             {
-                target = new Vector3(-1, 0, 0),
+                target = new Vector3(1, 0, 0),
                 up = new Vector3(0.0f, 1.0f, 0.0f),
-                position = new Vector3(0, 0, 0),
+                position = new Vector3(0.5f, 0, 0.5f),
                 fovy = 45.0f,
                 projection = CameraProjection.CAMERA_PERSPECTIVE,
             };

@@ -76,32 +76,45 @@ namespace MazeGame.Algorithms
             return maze;
         }
 
-        private static void CarveRooms(ref Blocks[,] maze)
+        private static HashSet<Rectangle> CarveRooms(ref Blocks[,] maze)
         {
+            HashSet<Rectangle> rectangles = new();
 
-            var mazewidth = Constants.Mazesize;
-            var mazeheight = Constants.Mazesize;
-
-            var maxamount = (int)(Math.Sqrt(mazewidth + mazeheight));
+            var maxamount = (int)(Math.Sqrt(Constants.Mazesize * 2));
             var amount = Rng.Next(maxamount, maxamount * 5);
             for (var i = 0; i < amount; i++)
             {
-                var posx = Rng.Next(1, mazewidth - 1);
-                var posy = Rng.Next(1, mazeheight - 1);
+                var posx = Rng.Next(1, Constants.Mazesize - 1);
+                var posy = Rng.Next(1, Constants.Mazesize - 1);
                 var width = Rng.Next(Math.Min(2, maxamount / 2), Math.Max(2, maxamount / 2));
                 var height = Rng.Next(Math.Min(2, maxamount / 2), Math.Max(2, maxamount / 2));
+
+
+                var rect = new Rectangle(posx -1, posy -1, width +1, height +1);
+
+                if (rectangles.Any(r => Raylib.CheckCollisionRecs(r, rect)))
+                {
+                    amount++;
+                    continue;
+                }
+
+                rectangles.Add(rect);
+
                 for (var x = 0; x < width; x++)
                 {
                     for (var y = 0; y < height; y++)
                     {
-                        var carvex = Tools.Clamp(posx + x, mazewidth);
-                        var carvey = Tools.Clamp(posy + y, mazeheight);
+                        var carvex = Tools.Clamp(posx + x, Constants.Mazesize);
+                        var carvey = Tools.Clamp(posy + y, Constants.Mazesize);
 
                         maze[carvex, carvey] = Blocks.Room;
                     }
                 }
             }
+
+            return rectangles;
         }
+
 
 
         //private static void CarvePassagesFrom(int x, int y, ref Blocks[,] grid)

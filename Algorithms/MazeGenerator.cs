@@ -78,8 +78,8 @@ namespace MazeGame.Algorithms
 
         private static void CarveRooms(ref Blocks[,] maze)
         {
-            var mazewidth = GameLoop.Mazesize;
-            var mazeheight = GameLoop.Mazesize;
+            var mazewidth = Constants.Mazesize;
+            var mazeheight = Constants.Mazesize;
 
             var maxamount = (int)(Math.Sqrt(mazewidth + mazeheight));
             var amount = Rng.Next(maxamount, maxamount * 5);
@@ -111,8 +111,8 @@ namespace MazeGame.Algorithms
             {
                 var cx = x + Dx(dir);
                 var cy = y + Dy(dir);
-                if (0 > cx || cx >= GameLoop.Mazesize
-                           || 0 > cy || cy >= GameLoop.Mazesize
+                if (0 > cx || cx >= Constants.Mazesize
+                           || 0 > cy || cy >= Constants.Mazesize
                            || grid[cx, cy] != Blocks.Undefined)
                     continue;
                 grid[x, y] = (Blocks)((int)dir + (int)grid[x, y]);
@@ -136,8 +136,8 @@ namespace MazeGame.Algorithms
 
                 foreach (var dir in directions)
                 {
-                    var cx = Tools.Clamp(x + Dx(dir), GameLoop.Mazesize);
-                    var cy = Tools.Clamp(y + Dy(dir), GameLoop.Mazesize);
+                    var cx = Tools.Clamp(x + Dx(dir), Constants.Mazesize);
+                    var cy = Tools.Clamp(y + Dy(dir), Constants.Mazesize);
                     if (
                         //0 > cx || cx >= GameLoop.Mazesize ||
                         //0 > cy || cy >= GameLoop.Mazesize ||
@@ -174,8 +174,8 @@ namespace MazeGame.Algorithms
             depth++;
             foreach (var dir in ValidDirections)
             {
-                var cx = Tools.Clamp(x + Dx(dir), GameLoop.Mazesize);
-                var cy = Tools.Clamp(y + Dy(dir), GameLoop.Mazesize);
+                var cx = Tools.Clamp(x + Dx(dir), Constants.Mazesize);
+                var cy = Tools.Clamp(y + Dy(dir), Constants.Mazesize);
                 if (
                 //0 > cx || cx >= GameLoop.Mazesize
                 //       || 0 > cy || cy >= GameLoop.Mazesize

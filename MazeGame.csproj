@@ -171,6 +171,9 @@
     <None Update="resources\models\spiderweb.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="resources\models\spiderweb_modeled.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="resources\textures\2k\exit_diff.jpg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

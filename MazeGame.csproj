@@ -22,17 +22,14 @@
     <None Remove="resources\models\corner.obj" />
     <None Remove="resources\models\cross.obj" />
     <None Remove="resources\models\end.obj" />
-    <None Remove="resources\models\exit.obj" />
-    <None Remove="resources\models\exit_open.obj" />
     <None Remove="resources\models\floor.obj" />
     <None Remove="resources\models\moss.obj" />
     <None Remove="resources\models\stairs.obj" />
-    <None Remove="resources\models\start.obj" />
     <None Remove="resources\models\straight.obj" />
     <None Remove="resources\models\tcross.obj" />
     <None Remove="resources\models\wall.obj" />
-    <None Remove="resources\shaders\normal_mapping.fs" />
-    <None Remove="resources\shaders\normal_mapping.vs" />
+    <None Remove="resources\shaders\normal_mapping.fs.glsl" />
+    <None Remove="resources\shaders\normal_mapping.vs.glsl" />
     <None Remove="resources\textures\exit_diff.dds" />
     <None Remove="resources\textures\exit_disp.dds" />
     <None Remove="resources\textures\exit_normal.dds" />
@@ -59,9 +56,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="resources\mazeblocks_32.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="resources\mazeblocks_4.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -80,12 +74,6 @@
     <Content Include="resources\models\end.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="resources\models\exit.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\models\exit_open.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="resources\models\floor.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -93,9 +81,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\models\stairs.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\models\start.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\models\straight.obj">
@@ -140,10 +125,10 @@
     <Content Include="resources\textures\pipe_spec.dds">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="resources\shaders\normal_mapping.fs">
+    <Content Include="resources\shaders\normal_mapping.fs.glsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="resources\shaders\normal_mapping.vs">
+    <Content Include="resources\shaders\normal_mapping.vs.glsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\textures\spiderweb_diff.dds">
@@ -174,7 +159,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="resources\mazeblocks_16.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\mazeblocks_minimal.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\models\room.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="resources\models\spiderweb.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\models\spiderweb_modeled.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="resources\textures\2k\exit_diff.jpg">

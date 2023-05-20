@@ -309,6 +309,6 @@ namespace MazeGame.Algorithms
             return result;
         }
 
-        private static Rectangle Mazerect(int x, int y, int size) => new Rectangle(x * size, y * size, size, size);
+        public static Rectangle Mazerect(int x, int y, int size) => new Rectangle(x * size, y * size, size, size);
     }
 }

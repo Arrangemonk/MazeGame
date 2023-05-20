@@ -81,8 +81,21 @@ namespace MazeGame.Loops
                 {
                     var dpos = new Vector2(x * Constants.Blocksize, z * Constants.Blocksize);
                     var tile = _maze[x, z];
+                    if (tile >= Blocks.Room)
+                    {
+                        var top = _maze[x, Tools.Clamp(z - 1, Constants.Mazesize)];
+                        var left = _maze[Tools.Clamp(x - 1, Constants.Mazesize), z];
 
-                    Raylib.DrawTextureRec(_mazeblocks, _tileset[tile], dpos, Color.WHITE);
+                        var ntop = ((int)top & (int)Directions.South) != 0;
+                        var nleft = ((int)left & (int)Directions.West) != 0;
+
+                        var rect = MazeGenerator.Mazerect((ntop && nleft) ? 0 : nleft ? 1 : ntop ? 2 : 4, 0, Constants.Blocksize);
+                        Raylib.DrawTextureRec(_mazeblocks, rect, dpos, Color.WHITE);
+                    }
+                    else
+                    {
+                        Raylib.DrawTextureRec(_mazeblocks, _tileset[tile], dpos, Color.WHITE);
+                    }
                 }
 
 
@@ -214,7 +227,6 @@ namespace MazeGame.Loops
                 0, new Color(255, 255, 255, 128));
             foreach (var tile in tiles)
             {
-                //(startposx + _mazeTexture.texture.width / 2f + tile.Item1 * Blocksize - camx * Blocksize)
                 var dx = startposx + _mazeTexture.texture.width / 2f + Tools.DrawOffsetByQuadrantUi(tile.Item1 - camx) * Constants.Blocksize;
                 var dy = startposy + _mazeTexture.texture.height / 2f + Tools.DrawOffsetByQuadrantUi(tile.Item2 - camz) * Constants.Blocksize;
 

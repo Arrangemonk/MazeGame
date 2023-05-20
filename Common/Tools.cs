@@ -263,24 +263,18 @@ namespace MazeGame.Common
 
             var cam = campos < Constants.Mazesize * 0.5f;
 
-            var ccam = campos < Constants.Mazesize * 0.25f || campos > Constants.Mazesize * 0.75f;
+            var ccam = Tools.Clamp(campos, Constants.Mazesize) is < Constants.Mazesize * 0.25f or > Constants.Mazesize * 0.75f;
 
             var result = drawpos + Constants.Mazesize * ((draw && !cam && ccam) ? 1.0f : (!draw && cam && ccam) ? -1.0f : 0.0f);
 
             return result;
         }
 
-        public static float DrawOffsetByQuadrantUi(float drawpos, float campos)
+        public static float DrawOffsetByQuadrantUi(float drawpos)
         {
-            var draw = drawpos < Constants.Mazesize * 0.5f;
+            drawpos = Tools.Clamp(drawpos, Constants.Mazesize);
 
-            var cam = campos < Constants.Mazesize * 0.5f;
-
-            var ccam = Tools.Clamp(campos, Constants.Mazesize) is < Constants.Mazesize * 0.25f or > Constants.Mazesize * 0.75f;
-
-            var result = drawpos + Constants.Mazesize * ((draw && !cam && ccam) ? 1.0f : (!draw && cam && ccam) ? -1.0f : 0.0f);
-
-            return result;
+            return (drawpos >= Constants.Mazesize * 0.5f) ? drawpos - Constants.Mazesize: drawpos;
         }
     }
 }

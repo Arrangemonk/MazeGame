@@ -141,7 +141,7 @@ namespace MazeGame.Loops
 
         private void ResetMaze()
         {
-            _oldpos = _camera.position = Constants.DefaultOffset;//new Vector3(GameLoop.Mazesize / 2f, 0, GameLoop.Mazesize / 2f);
+            _oldpos = _camera.position = Constants.DefaultOffset;
             _maze = MazeGenerator.GenerateMaze(Constants.Mazesize, Constants.Mazesize);
             _randoms = MazeGenerator.GenerateRandomIntegers(Constants.Mazesize, Constants.Mazesize);
             PrepareMazeTexture();
@@ -215,8 +215,8 @@ namespace MazeGame.Loops
             foreach (var tile in tiles)
             {
                 //(startposx + _mazeTexture.texture.width / 2f + tile.Item1 * Blocksize - camx * Blocksize)
-                var dx = startposx + _mazeTexture.texture.width / 2f + Tools.DrawOffsetByQuadrantUi(tile.Item1 - camx, index.Item1) * Constants.Blocksize;
-                var dy = startposy + _mazeTexture.texture.height / 2f + Tools.DrawOffsetByQuadrantUi(tile.Item2 - camz, index.Item2) * Constants.Blocksize;
+                var dx = startposx + _mazeTexture.texture.width / 2f + Tools.DrawOffsetByQuadrantUi(tile.Item1 - camx) * Constants.Blocksize;
+                var dy = startposy + _mazeTexture.texture.height / 2f + Tools.DrawOffsetByQuadrantUi(tile.Item2 - camz) * Constants.Blocksize;
 
                 Raylib.DrawRectangle(
                     (int)dx,

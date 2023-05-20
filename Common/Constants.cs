@@ -5,7 +5,7 @@ namespace MazeGame.Common;
 
 internal static class Constants
 {
-    public const int Mazesize = 25;
+    public const int Mazesize = 225;
     public const int Exitpos = Constants.Mazesize - 1;
     public const float Scale = 1.0f / 30;
     public static readonly Color Tint = Color.WHITE;

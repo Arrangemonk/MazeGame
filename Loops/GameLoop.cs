@@ -44,6 +44,7 @@ namespace MazeGame.Loops
         private Vector3 _oldtarget;
         private bool _displayOverlay;
         private bool _wireframe;
+        private bool _render3d = true;
         public static float Tickscale => Constants.Ticks / Raylib.GetFPS().Map(a => a == 0 ? 1 : a);
         private int _maxdepth = 7;
 
@@ -86,8 +87,8 @@ namespace MazeGame.Loops
                         var top = _maze[x, Tools.Clamp(z - 1, Constants.Mazesize)];
                         var left = _maze[Tools.Clamp(x - 1, Constants.Mazesize), z];
 
-                        var ntop = ((int)top & (int)Directions.South) != 0;
-                        var nleft = ((int)left & (int)Directions.West) != 0;
+                        var ntop = top < Blocks.Room && ((int)top & (int)Directions.South) == 0;
+                        var nleft = left < Blocks.Room && ((int)left & (int)Directions.West) == 0;
 
                         var rect = MazeGenerator.Mazerect((ntop && nleft) ? 0 : nleft ? 1 : ntop ? 2 : 4, 0, Constants.Blocksize);
                         Raylib.DrawTextureRec(_mazeblocks, rect, dpos, Color.WHITE);
@@ -119,11 +120,11 @@ namespace MazeGame.Loops
 
         private void ProcessInputs()
         {
-            var key = Raylib.GetKeyPressed();
+            var key = (KeyboardKey)Raylib.GetKeyPressed();
 
             switch (key)
             {
-                case (int)KeyboardKey.KEY_F3:
+                case KeyboardKey.KEY_F3:
                     {
                         const string screenshots = nameof(screenshots);
                         if (!Directory.Exists(screenshots))
@@ -131,23 +132,26 @@ namespace MazeGame.Loops
                         Raylib.TakeScreenshot($"{screenshots}/{Guid.NewGuid()}.png");
                         break;
                     }
-                case (int)KeyboardKey.KEY_R:
+                case KeyboardKey.KEY_R:
                     ResetMaze();
                     break;
-                case (int)KeyboardKey.KEY_F1:
+                case KeyboardKey.KEY_F1:
                     _displayOverlay = !_displayOverlay;
                     break;
-                case (int)KeyboardKey.KEY_F2:
+                case KeyboardKey.KEY_F2:
                     _wireframe = !_wireframe;
                     break;
-                case (int)KeyboardKey.KEY_UP:
+                case KeyboardKey.KEY_UP:
                     _maxdepth++;
                     break;
-                case (int)KeyboardKey.KEY_DOWN:
+                case KeyboardKey.KEY_DOWN:
                     _maxdepth--;
                     break;
-                case (int)KeyboardKey.KEY_F4:
+                case KeyboardKey.KEY_F4:
                     Program.Togglefullscreen();
+                    break;
+                case KeyboardKey.KEY_F5:
+                    _render3d = !_render3d;
                     break;
             }
         }
@@ -232,7 +236,7 @@ namespace MazeGame.Loops
 
                 Raylib.DrawRectangle(
                     (int)dx,
-                    (int)dy, Constants.Blocksize - 2, Constants.Blocksize - 2, new Color(0, 0, 255, 64));
+                    (int)dy, Constants.Blocksize, Constants.Blocksize, new Color(0, 0, 255, 64));
             }
             Raylib.DrawRectangle(
                 startposx + _mazeTexture.texture.width / 2,
@@ -249,32 +253,42 @@ namespace MazeGame.Loops
             return ((int)Math.Floor(_camera.position.X), (int)Math.Floor(_camera.position.Z));
         }
 
-        private new HashSet<(int, int)> DrawLevel()
+        private HashSet<(int, int)> DrawLevel()
         {
             var dpos = Tools.DrawOffsetByQuadrant(Constants.DefaultOffset, _camera.position);
-            Raylib.DrawModel(_transit, dpos, Constants.Scale, Constants.Tint);
-            dpos = Tools.DrawOffsetByQuadrant(new Vector3(Constants.Exitpos, 1, Constants.Exitpos) + Constants.DefaultOffset, _camera.position);
-            Raylib.DrawModel(_transit, dpos, Constants.Scale, Constants.Tint);
+            if (_render3d)
+            {
+                Raylib.DrawModel(_transit, dpos, Constants.Scale, Constants.Tint);
+                dpos = Tools.DrawOffsetByQuadrant(
+                    new Vector3(Constants.Exitpos, 1, Constants.Exitpos) + Constants.DefaultOffset, _camera.position);
+                Raylib.DrawModel(_transit, dpos, Constants.Scale, Constants.Tint);
+            }
             var index = TileIndexFromCamera();
 
             var drawList = new HashSet<(int, int)>();
             Checkvisibility(index.Item1, index.Item2, ref drawList);
+            if (!_render3d) return drawList;
 
             foreach (var tup in drawList)
             {
                 DrawTile(tup.Item1, tup.Item2);
             }
+
             Rlgl.rlDisableDepthMask();
             Raylib.BeginBlendMode(BlendMode.BLEND_ADD_COLORS);
             foreach (var tup in drawList.Where(elem => TileCondition(elem, 10)))
             {
-                dpos = Tools.DrawOffsetByQuadrant(new Vector3(tup.Item1, 0, tup.Item2) + Constants.DefaultOffset, _camera.position);
+                dpos = Tools.DrawOffsetByQuadrant(new Vector3(tup.Item1, 0, tup.Item2) + Constants.DefaultOffset,
+                    _camera.position);
                 Raylib.DrawModel(_spiderweb, dpos, Constants.Scale, Constants.Tint);
             }
+
             Raylib.EndBlendMode();
             Rlgl.rlEnableDepthMask();
             if (_displayOverlay)
-                Raylib.DrawSphere(_camera.position + Vector3.Normalize(_camera.target - _camera.position) * .1f, .001f, new Color(255, 255, 255, 64));
+                Raylib.DrawSphere(_camera.position + Vector3.Normalize(_camera.target - _camera.position) * .1f,
+                    .001f, new Color(255, 255, 255, 64));
+
             return drawList;
         }
 

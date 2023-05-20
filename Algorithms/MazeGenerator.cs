@@ -78,6 +78,7 @@ namespace MazeGame.Algorithms
 
         private static void CarveRooms(ref Blocks[,] maze)
         {
+
             var mazewidth = Constants.Mazesize;
             var mazeheight = Constants.Mazesize;
 
@@ -103,39 +104,44 @@ namespace MazeGame.Algorithms
         }
 
 
-        private static void CarvePassagesFrom(int x, int y, ref Blocks[,] grid)
-        {
-            var directions = ValidDirections.OrderBy(e => Rng.Next());
+        //private static void CarvePassagesFrom(int x, int y, ref Blocks[,] grid)
+        //{
+        //    var directions = ValidDirections.OrderBy(e => Rng.Next());
 
-            foreach (var dir in directions)
-            {
-                var cx = x + Dx(dir);
-                var cy = y + Dy(dir);
-                if (0 > cx || cx >= Constants.Mazesize
-                           || 0 > cy || cy >= Constants.Mazesize
-                           || grid[cx, cy] != Blocks.Undefined)
-                    continue;
-                grid[x, y] = (Blocks)((int)dir + (int)grid[x, y]);
-                grid[cx, cy] = (Blocks)Opposite(dir);
-                CarvePassagesFrom(cx, cy, ref grid);
-            }
-        }
+        //    foreach (var dir in directions)
+        //    {
+        //        var cx = x + Dx(dir);
+        //        var cy = y + Dy(dir);
+        //        if (0 > cx || cx >= Constants.Mazesize
+        //                   || 0 > cy || cy >= Constants.Mazesize
+        //                   || grid[cx, cy] != Blocks.Undefined)
+        //            continue;
+        //        grid[x, y] = (Blocks)((int)dir + (int)grid[x, y]);
+        //        grid[cx, cy] = (Blocks)Opposite(dir);
+        //        CarvePassagesFrom(cx, cy, ref grid);
+        //    }
+        //}
 
         private static void CarvePassagesFromIterative(int startX, int startY, ref Blocks[,] grid)
         {
             var path = new List<(int x, int y)>();
             var stack = new Stack<(int x, int y)>();
+            //try to prefer straight lines a little
+            var dirsstack = new Stack<Directions>();
             stack.Push((startX, startY));
+            dirsstack.Push(Directions.South);
             path.Add((startX, startY));
 
             while (stack.Count > 0)
             {
                 var (x, y) = stack.Peek();
-                var directions = ValidDirections.OrderBy(e => Rng.Next()).ToList();
+                var olddir = dirsstack.Pop();
+                var directions = ValidDirections.Concat(new []{ olddir , olddir }).OrderBy(e => Rng.Next()).ToList();
                 bool hasUnvisited = false;
 
                 foreach (var dir in directions)
                 {
+                    dirsstack.Push(dir);
                     var cx = Tools.Clamp(x + Dx(dir), Constants.Mazesize);
                     var cy = Tools.Clamp(y + Dy(dir), Constants.Mazesize);
                     if (
@@ -147,7 +153,6 @@ namespace MazeGame.Algorithms
                     grid[x, y] = (Blocks)((int)dir + (int)grid[x, y]);
                     if (grid[cx, cy] == Blocks.Room)
                     {
-                        grid[cx, cy] = Blocks.RoomBlocked;
                         FillRoom(cx, cy, ref grid, 0);
                         continue;
                     }
@@ -167,22 +172,19 @@ namespace MazeGame.Algorithms
             }
         }
 
+        static readonly float _maxDepth = 1.5f * MathF.Sqrt(Constants.Mazesize);
         private static void FillRoom(int x, int y, ref Blocks[,] grid, int depth)
         {
-            if (depth > 2)
+            grid[x, y] = Blocks.RoomBlocked;
+            if (depth > _maxDepth)
                 return;
             depth++;
             foreach (var dir in ValidDirections)
             {
                 var cx = Tools.Clamp(x + Dx(dir), Constants.Mazesize);
                 var cy = Tools.Clamp(y + Dy(dir), Constants.Mazesize);
-                if (
-                //0 > cx || cx >= GameLoop.Mazesize
-                //       || 0 > cy || cy >= GameLoop.Mazesize
-                //    || 
-                grid[cx, cy] != Blocks.Room)
+                if (grid[cx, cy] != Blocks.Room)
                     continue;
-                grid[cx, cy] = Blocks.RoomBlocked;
                 FillRoom(cx, cy, ref grid, depth);
             }
         }

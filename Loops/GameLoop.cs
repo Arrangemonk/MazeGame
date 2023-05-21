@@ -45,6 +45,7 @@ namespace MazeGame.Loops
         private bool _displayOverlay;
         private bool _wireframe;
         private bool _render3d = true;
+        private bool _collision = true;
         public static float Tickscale => Constants.Ticks / Raylib.GetFPS().Map(a => a == 0 ? 1 : a);
         private int _maxdepth = 7;
 
@@ -153,6 +154,9 @@ namespace MazeGame.Loops
                 case KeyboardKey.KEY_F5:
                     _render3d = !_render3d;
                     break;
+                case KeyboardKey.KEY_F6:
+                    _collision = !_collision;
+                    break;
             }
         }
 
@@ -179,7 +183,8 @@ namespace MazeGame.Loops
                 if (Raylib.IsKeyDown(KeyboardKey.KEY_S)) Raylib.CameraMoveForward(&cam, -cameraMoveSpeed, true);
                 if (Raylib.IsKeyDown(KeyboardKey.KEY_D)) Raylib.CameraMoveRight(&cam, cameraMoveSpeed, true);
 
-                (cam.position, cam.target) = Tools.Collision(_oldpos, cam.position, _oldtarget, cam.target, _maze);
+                if(_collision)
+                    (cam.position, cam.target) = Tools.Collision(_oldpos, cam.position, _oldtarget, cam.target, _maze);
 
                 var relativetarget = Vector3.Normalize(cam.target - cam.position);
 

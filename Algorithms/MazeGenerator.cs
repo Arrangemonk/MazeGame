@@ -149,10 +149,9 @@ namespace MazeGame.Algorithms
             {
                 var (x, y) = stack.Peek();
                 var olddir = dirsstack.Pop();
-                var directions = ValidDirections.Concat(new []{ olddir , olddir }).OrderBy(e => Rng.Next()).ToList();
-                bool hasUnvisited = false;
+                var hasUnvisited = false;
 
-                foreach (var dir in directions)
+                foreach (var dir in ValidDirections.Concat(new[] { olddir, olddir }).OrderBy(e => Rng.Next()))
                 {
                     dirsstack.Push(dir);
                     var cx = Tools.Clamp(x + Dx(dir), Constants.Mazesize);
@@ -166,7 +165,10 @@ namespace MazeGame.Algorithms
                     grid[x, y] = (Blocks)((int)dir + (int)grid[x, y]);
                     if (grid[cx, cy] == Blocks.Room)
                     {
-                        FillRoom(cx, cy, ref grid, 0);
+                        var depth = 0;
+                        var (rx,ry) = FillRoom(cx, cy, ref grid,ref depth);
+                        if(depth > 1)
+                            grid[rx, ry] = Blocks.Room;
                         continue;
                     }
                     grid[cx, cy] = (Blocks)Opposite(dir);
@@ -185,21 +187,63 @@ namespace MazeGame.Algorithms
             }
         }
 
-        static readonly float _maxDepth = 1.5f * MathF.Sqrt(Constants.Mazesize);
-        private static void FillRoom(int x, int y, ref Blocks[,] grid, int depth)
+        private static (int,int) FillRoom(int startX, int startY, ref Blocks[,] grid, ref int depth)
         {
-            grid[x, y] = Blocks.RoomBlocked;
-            if (depth > _maxDepth)
-                return;
-            depth++;
-            foreach (var dir in ValidDirections)
+            var filledPoints = new HashSet<(int, int)>();
+            var stack = new Stack<(int, int)>();
+            stack.Push((startX, startY));
+
+            while (stack.Count > 0)
             {
-                var cx = Tools.Clamp(x + Dx(dir), Constants.Mazesize);
-                var cy = Tools.Clamp(y + Dy(dir), Constants.Mazesize);
-                if (grid[cx, cy] != Blocks.Room)
+                depth++;
+                var (x, y) = stack.Pop();
+
+                if (grid[x, y] != Blocks.Room)
                     continue;
-                FillRoom(cx, cy, ref grid, depth);
+
+                if((x, y) != (startX, startY))
+                    filledPoints.Add((x, y));
+                grid[x, y] = Blocks.RoomBlocked;
+
+                // Check all 8 neighboring cells
+                for (var dx = -1; dx <= 1; dx++)
+                {
+                    for (var dy = -1; dy <= 1; dy++)
+                    {
+                        var cx = Tools.Clamp(x + dx,Constants.Mazesize);
+                        var cy = Tools.Clamp(y + dy, Constants.Mazesize);
+
+                        if (grid[cx, cy] == Blocks.Room)
+                        {
+                            stack.Push((cx, cy));
+                        }
+                    }
+                }
             }
+            var borderPoints = GetBorderPoints(ref filledPoints);
+            var count = borderPoints.Count;
+            return count == 0 ? (startX,startY) : borderPoints[Rng.Next(borderPoints.Count)];
+        }
+
+        private static List<(int, int)> GetBorderPoints(ref HashSet<(int, int)> filledPoints)
+        {
+            var borderPoints = new List<(int, int)>();
+
+            foreach (var (x, y) in filledPoints)
+            {
+                if (IsOnBorder(x, y,ref filledPoints))
+                {
+                    borderPoints.Add((x, y));
+                }
+            }
+
+            return borderPoints;
+        }
+
+        private static bool IsOnBorder(int x, int y,ref HashSet<(int, int)> filledPoints)
+        {
+            return !filledPoints.Contains(Tools.Clamp((x + 1, y),Constants.Mazesize)) || !filledPoints.Contains(Tools.Clamp((x - 1, y), Constants.Mazesize)) ||
+                   !filledPoints.Contains(Tools.Clamp((x, y + 1), Constants.Mazesize)) || !filledPoints.Contains(Tools.Clamp((x, y - 1), Constants.Mazesize));
         }
 
         public static IEnumerable<Directions> Dirx(float x)

@@ -104,6 +104,11 @@ namespace MazeGame.Common
             return ((input % max) + max) % max;
         }
 
+        public static (int,int) Clamp((int, int) input, int max)
+        {
+            return (Clamp(input.Item1, max), Clamp(input.Item2, max));
+        }
+
         public static Vector3 Clamp(Vector3 input, Vector3 max)
         {
             return new Vector3(Clamp(input.X, max.X), input.Y, Clamp(input.Z, max.Z));
@@ -198,9 +203,9 @@ namespace MazeGame.Common
         {
             return new Camera3D
             {
-                target = new Vector3(Constants.Mazesize/2f + 1.5f, 0, Constants.Mazesize / 2f + 0.5f),
+                target = new Vector3(1.5f, 0,+ 0.5f),
                 up = new Vector3(0.0f, 1.0f, 0.0f),
-                position = new Vector3(Constants.Mazesize / 2f + 0.5f, 0, Constants.Mazesize / 2f + 0.5f),
+                position = Constants.DefaultOffset,
                 fovy = 45.0f,
                 projection = CameraProjection.CAMERA_PERSPECTIVE,
             };

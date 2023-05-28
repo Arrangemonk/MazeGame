@@ -35,6 +35,8 @@ namespace MazeGame.Loops
 
         private readonly Dictionary<Blocks, Rectangle> _tileset;
         private readonly Dictionary<Blocks, Model> _parts;
+        private readonly Dictionary<Blocks, Model> _upipe;
+        private readonly Dictionary<Blocks, Model> _ustairs;
         private Camera3D _camera;
 
         private readonly int _lightPosLoc;
@@ -46,7 +48,7 @@ namespace MazeGame.Loops
         private bool _wireframe;
         private bool _render3d = true;
         private bool _collision = true;
-        public static float Tickscale => Constants.Ticks / Raylib.GetFPS().Map(a => a == 0 ? 1 : a);
+        public static float Tickscale => Constants.Ticks / Raylib.GetFPS().Map(a => Math.Max(Math.Min(a,120),15));
         private int _maxdepth = 7;
 
 
@@ -60,7 +62,10 @@ namespace MazeGame.Loops
             _mud = Tools.PrepareModel("floor", "mud", _shader["normal_mapping"], Matrix4x4.Identity, ref _textures, ref _models);
             _mazeblocks = Raylib.LoadTexture($"resources/mazeblocks_{Constants.Blocksize}.png");
             _tileset = MazeGenerator.PrepareMazePrint(Constants.Blocksize);
-            _parts = MazeGenerator.PrepareMazeParts(_shader["normal_mapping"], ref _textures, ref _models);
+            _parts = MazeGenerator.PrepareMazeParts(_shader["normal_mapping"], "brick", ref _textures, ref _models);
+            //_parts = MazeGenerator.PrepareMazeParts(_shader["normal_mapping"], "concrete", ref _textures, ref _models);
+            _upipe = MazeGenerator.PrepareUpwardsParts(_shader["normal_mapping"], ref _textures, ref _models);
+            _ustairs = MazeGenerator.PrepareStairsParts(_shader["normal_mapping"], ref _textures, ref _models);
             _camera = Tools.CameraSetup();
             ResetMaze();
             // Diffuse light
@@ -195,7 +200,7 @@ namespace MazeGame.Loops
                 Raylib.CameraYaw(&cam, -mousePositionDelta.X * cameraMouseMoveSensitivity, false);
                 Raylib.CameraPitch(&cam, -mousePositionDelta.Y * cameraMouseMoveSensitivity, true, false, false);
 
-                relativetarget = Vector3.Normalize(cam.target - cam.position);
+                //relativetarget = Vector3.Normalize(cam.target - cam.position);
 
                 Raylib.SetShaderValue(_shader["normal_mapping"], _lightPosLoc, Tools.DrawOffsetByQuadrant(Tools.Clamp(cam.position + relativetarget * 0.2f, Constants.Maxcam), cam.position), ShaderUniformDataType.SHADER_UNIFORM_VEC3);
                 Raylib.SetShaderValue(_shader["normal_mapping"], _specularPosLoc, cam.position, ShaderUniformDataType.SHADER_UNIFORM_VEC3);
@@ -277,6 +282,7 @@ namespace MazeGame.Loops
             foreach (var tup in drawList)
             {
                 DrawTile(tup.Item1, tup.Item2);
+
             }
 
             Rlgl.rlDisableDepthMask();
@@ -297,25 +303,72 @@ namespace MazeGame.Loops
             return drawList;
         }
 
-        private bool TileCondition((int, int) elem, int threshold)
+        private bool TileCondition((int, int) elem, int thresholdup, int tresholdlow = 0)
         {
-            return _randoms[elem.Item1, elem.Item2] < threshold && _maze[elem.Item1, elem.Item2] < Blocks.Room;
+            return _randoms[elem.Item1, elem.Item2].Map(e => tresholdlow < e && e < thresholdup)  && _maze[elem.Item1, elem.Item2] < Blocks.Room;
+        }
+
+        private IEnumerable<Directions> DirectionsFromCamera()
+        {
+            var floatDirection = Vector3.Normalize(_camera.target - _camera.position);
+            foreach (var dir in MazeGenerator.Dirx(floatDirection.X))
+                yield return dir;
+            foreach (var dir in MazeGenerator.Diry(floatDirection.Z))
+                yield return dir;
+
         }
 
         private void Checkvisibility(int x, int z, ref HashSet<(int, int)> drawList)
         {
+            //safety zone
             for (var tx = -1; tx <= 1; tx++)
             {
                 for (var tz = -1; tz <= 1; tz++)
                 {
                     var cx = Tools.Clamp(x + tx, Constants.Mazesize);
                     var cz = Tools.Clamp(z + tz, Constants.Mazesize);
-                    drawList.Add((cx, cz));
+                    if(Blocks.Room <= _maze[x, z] ) 
+                        drawList.Add((cx, cz));
                 }
             }
 
+            //for efficient maze rendering
+            CheckvisibilityLoop(x, z, Directions.Undefined, DirectionsFromCamera().ToArray(), 0, ref drawList);
+
+            //for room rendering
             var floatDirection = Vector3.Normalize(_camera.target - _camera.position);
-            Tools.Drawtrangle(floatDirection, x, z, _maxdepth, ref drawList);
+            Tools.Drawtrangle(floatDirection, x, z, _maxdepth,_maze, ref drawList);
+        }
+
+        private void CheckvisibilityLoop(int x, int z, Directions old, Directions[] cd, int depth, ref HashSet<(int, int)> drawList)
+        {
+            Stack<(int, int, Directions, int)> stack = new Stack<(int, int, Directions, int)>();
+            stack.Push((x, z, old, depth));
+
+            while (stack.Count > 0)
+            {
+                var (currentX, currentZ, currentOld, currentDepth) = stack.Pop();
+
+                if (_maze[currentX, currentZ] < Blocks.Room)
+                    drawList.Add((currentX, currentZ));
+
+                currentDepth++;
+                if (currentDepth > _maxdepth)
+                    continue;
+
+                var directions = MazeGenerator.DirectionsFromblock(_maze[currentX, currentZ])
+                    .Except(new[] { MazeGenerator.Opposite(currentOld),Directions.Undefined });
+
+                foreach (var direction in directions)
+                {
+                    var percievedDepth = cd.Contains(direction) ? currentDepth : _maxdepth;
+
+                    var cx = Tools.Clamp(currentX + MazeGenerator.Dx(direction), Constants.Mazesize);
+                    var cz = Tools.Clamp(currentZ + MazeGenerator.Dy(direction), Constants.Mazesize);
+
+                    stack.Push((cx, cz, direction, percievedDepth));
+                }
+            }
         }
 
 
@@ -326,28 +379,50 @@ namespace MazeGame.Loops
             var tile = _maze[x, z];
             if (_wireframe)
             {
-                Raylib.DrawModelWires(_parts[tile], dpos, Constants.Scale, Constants.Tint);
-                if (tile < Blocks.Room)
+                //if (tile.IsStraight())
+                //{
+                //    var tmptile = (Blocks)((int)tile + (int)Blocks.Up);
+                //    Raylib.DrawModelWires(_upipe[tile], dpos, Constants.Scale, Constants.Tint);
+                //    Raylib.DrawModelWires(_ustairs[tile], dpos, Constants.Scale, Constants.Tint);
+                //}
+                //else
                 {
-                    Raylib.DrawModelWires(_moss, dpos, Constants.Scale, Constants.Tint);
-                    Raylib.DrawModelWires(_mud, dpos, Constants.Scale, Constants.Tint);
-                }
-                else
-                {
-                    Raylib.DrawModelWires(_wall, dpos, Constants.Scale, Constants.Tint);
+                    Raylib.DrawModelWires(_parts[tile], dpos, Constants.Scale, Constants.Tint);
+
+
+                    if (tile < Blocks.Room)
+                    {
+                        Raylib.DrawModelWires(_moss, dpos, Constants.Scale, Constants.Tint);
+                        Raylib.DrawModelWires(_mud, dpos, Constants.Scale, Constants.Tint);
+                    }
+                    else
+                    {
+                        Raylib.DrawModelWires(_wall, dpos, Constants.Scale, Constants.Tint);
+                    }
                 }
             }
             else
             {
-                Raylib.DrawModel(_parts[tile], dpos, Constants.Scale, Constants.Tint);
-                if (tile < Blocks.Room)
+
+                //if (tile.IsStraight())
+                //{
+                //    var tmptile = (Blocks)((int)tile + (int)Blocks.Up);
+                //    Raylib.DrawModel(_upipe[tmptile], dpos, Constants.Scale, Constants.Tint);
+                //    Raylib.DrawModel(_ustairs[tmptile], dpos, Constants.Scale, Constants.Tint);
+                //}
+                //else
                 {
-                    Raylib.DrawModel(_moss, dpos, Constants.Scale, Constants.Tint);
-                    Raylib.DrawModel(_mud, dpos, Constants.Scale, Constants.Tint);
-                }
-                else
-                {
-                    Raylib.DrawModel(_wall, dpos, Constants.Scale, Constants.Tint);
+                    Raylib.DrawModel(_parts[tile], dpos, Constants.Scale, Constants.Tint);
+
+                    if (tile < Blocks.Room)
+                    {
+                        Raylib.DrawModel(_moss, dpos, Constants.Scale, Constants.Tint);
+                        Raylib.DrawModel(_mud, dpos, Constants.Scale, Constants.Tint);
+                    }
+                    else
+                    {
+                        Raylib.DrawModel(_wall, dpos, Constants.Scale, Constants.Tint);
+                    }
                 }
             }
         }

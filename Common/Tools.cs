@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using System.Xml.XPath;
 using MazeGame.Algorithms;
+using Microsoft.VisualBasic;
 using Raylib_cs;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -17,7 +18,7 @@ namespace MazeGame.Common
 
     public static class Tools
     {
-        public static T Map<T>(this T input, Func<T, T> method) => method(input);
+        public static T2 Map<T1, T2>(this T1 input, Func<T1, T2> method) => method(input);
 
         public static Color ColorFromFloat(float r, float g, float b, float a)
         {
@@ -25,65 +26,20 @@ namespace MazeGame.Common
         }
 
         public const float Pi = (float)Math.PI;
+
+        public static Dictionary<Blocks, Rectangle[]> boxes = MazeGenerator.PrepareMazeCollosion();
         public static (Vector3, Vector3) Collision(Vector3 oldPos, Vector3 newPos, Vector3 oldTgt, Vector3 newTgt, Blocks[,] maze)
         {
-            float width = Constants.Mazesize;
-            float height = Constants.Mazesize;
+            var (newtile,x,z) = GetIile(newPos.X, newPos.Z, maze);
+            var (oldxtile, oldx, dz) = GetIile(oldPos.X, newPos.Z, maze);
+            var (oldztile, dx, oldz) = GetIile(newPos.X, oldPos.Z, maze);
 
+            var cxz = boxes[newtile].Aggregate(false, (current, box) => current || CheckCollition(new Vector2(x, z), box));
+            var coldx = boxes[oldxtile].Aggregate(false, (current, box) => current || CheckCollition(new Vector2(oldx, z), box));
+            var coldz = boxes[oldztile].Aggregate(false, (current, box) => current || CheckCollition(new Vector2(x, oldz), box));
 
-            var tx = Clamp(newPos.X, width);
-            var tz = Clamp(newPos.Z, height);
-
-            var tile = GetBoundarysFromMaze((int)(tx), (int)(tz), maze);
-
-            var isRoom = tile >= Blocks.Room;
-
-            var oldx = Clamp(oldPos.X, 1.0f);
-            var oldz = Clamp(oldPos.Z, 1.0f);
-
-            var x = Clamp(tx, 1.0f);
-            var z = Clamp(tz, 1.0f);
-
-            var minD = 1.0f - Range(isRoom);
-            var maxD = Range(isRoom);
-
-            var minX = 1.0f - Range(isRoom || ((int)tile & (int)Directions.East) != 0);
-            var maxX = Range(isRoom || ((int)tile & (int)Directions.West) != 0);
-            var minZ = 1.0f - Range(isRoom || ((int)tile & (int)Directions.North) != 0);
-            var maxZ = Range(isRoom || ((int)tile & (int)Directions.South) != 0);
-
-            var rectc = (
-                oldx >= minX &&
-                oldx <= maxX &&
-                z >= minD &&
-                z <= maxD
-            );
-
-            var recdb = (
-                oldx >= minD &&
-                oldx <= maxD &&
-                z >= minZ &&
-                z <= maxZ
-            );
-
-            var recte = (
-                x >= minX &&
-                x <= maxX &&
-                oldz >= minD &&
-                oldz <= maxD
-            );
-
-            var rectf = (
-                x >= minD &&
-                x <= maxD &&
-                oldz >= minZ &&
-                oldz <= maxZ
-            );
-
-            var canMoveX = (recte || rectf);
-            var canMoveZ = (rectc || recdb);
-
-
+            var canMoveX = (!cxz || !coldz);
+            var canMoveZ = (!cxz || !coldx);
 
             return (new Vector3(canMoveX ? newPos.X : oldPos.X,
                         newPos.Y,
@@ -92,6 +48,23 @@ namespace MazeGame.Common
                     newTgt.Y,
                     canMoveZ ? newTgt.Z : oldTgt.Z));
 
+        }
+
+        private static bool CheckCollition(Vector2 point, Rectangle box)
+        {
+            return box.x <= point.X && point.X <= box.x + box.width
+                && box.y <= point.Y && point.Y <= box.y + box.height;
+        }
+
+        private static (Blocks,float,float) GetIile(float xIn, float zIn, Blocks[,] maze)
+        {
+            var tx = Clamp(xIn, Constants.Mazesize);
+            var tz = Clamp(zIn, Constants.Mazesize);
+
+            var tile = maze[(int)tx, (int)tz];
+
+            tile = (tile < Blocks.Room) ? tile : (Blocks)((int)Blocks.RoomBlocked + (int)RoomDirections(tx, tz, maze));
+            return (tile, Clamp(tx, 1.0f), Clamp(tz, 1.0f));
         }
 
         public static float Clamp(float input, float max)
@@ -104,7 +77,7 @@ namespace MazeGame.Common
             return ((input % max) + max) % max;
         }
 
-        public static (int,int) Clamp((int, int) input, int max)
+        public static (int, int) Clamp((int, int) input, int max)
         {
             return (Clamp(input.Item1, max), Clamp(input.Item2, max));
         }
@@ -119,14 +92,6 @@ namespace MazeGame.Common
             return condiditon ? 3f : 0.8f;
         }
 
-        public static Blocks GetBoundarysFromMaze(int x, int z, Blocks[,] maze)
-        {
-            x = Clamp(x, Constants.Mazesize);
-            z = Clamp(z, Constants.Mazesize);
-            return maze[x, z];
-
-        }
-
 
 
         public static Model PrepareModel(string modelName, string textureName, Shader shader, Matrix4x4 transform, ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref List<Model> models)
@@ -136,35 +101,46 @@ namespace MazeGame.Common
                 const string diff = nameof(diff);
                 const string normal = nameof(normal);
                 const string spec = nameof(spec);
+                const string disp = nameof(disp);
 
                 var model = Raylib.LoadModel($"resources/models/{modelName}.obj");
                 models.Add(model);
 
-                Texture2D d, n, s;
+                Texture2D d, n, s, h;
 
-                if (!textures.ContainsKey(textureName))
+                var usedName = File.Exists(getTexturePath(Path.Combine(textureName, textureName), diff))
+                    ? Path.Combine(textureName, textureName)
+                    : File.Exists(getTexturePath(modelName, diff))
+                        ? modelName
+                        : textureName;
+
+                if (!textures.ContainsKey(usedName))
                 {
                     var texture = new Dictionary<string, Texture2D>();
-                    d = MountTexture(textureName, diff, ref texture);
-                    n = MountTexture(textureName, normal, ref texture);
-                    s = MountTexture(textureName, spec, ref texture);
-                    textures.Add(textureName, texture);
+                    d = MountTexture(usedName, diff, ref texture);
+                    n = MountTexture(usedName, normal, ref texture);
+                    s = MountTexture(usedName, spec, ref texture);
+                    h = MountTexture(usedName, disp, ref texture);
+                    textures.Add(usedName, texture);
                 }
                 else
                 {
-                    var texture = textures[textureName];
+                    var texture = textures[usedName];
                     d = texture[diff];
                     n = texture[normal];
                     s = texture[spec];
+                    h = texture[disp];
                 }
 
                 model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_DIFFUSE].texture = d;
                 model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_NORMAL].texture = n;
                 model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_SPECULAR].texture = s;
+                model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_HEIGHT].texture = h;
 
                 shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = Raylib.GetShaderLocation(shader, "diffuse");
                 shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = Raylib.GetShaderLocation(shader, "specular");
                 shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = Raylib.GetShaderLocation(shader, "normalMap");
+                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = Raylib.GetShaderLocation(shader, "heightMap");
                 model.materials[0].shader = shader;
                 model.transform = transform;
                 Raylib.GenMeshTangents(model.meshes);
@@ -174,12 +150,17 @@ namespace MazeGame.Common
 
         private static Texture2D MountTexture(string textureName, string type, ref Dictionary<string, Texture2D> textures)
         {
-            const string path = "resources/textures/{0}_{1}.{2}";
-            var texture = Raylib.LoadTexture(string.Format(path, textureName, type, "dds"));
-            Raylib.GenTextureMipmaps(ref texture);
+            var texture = Raylib.LoadTexture(getTexturePath(textureName, type));
             Raylib.SetTextureFilter(texture, TextureFilter.TEXTURE_FILTER_TRILINEAR);
+            Raylib.GenTextureMipmaps(ref texture);
             textures.Add(type, texture);
             return texture;
+        }
+
+        private static string getTexturePath(string textureName, string type)
+        {
+            const string path = "resources/textures/{0}_{1}.{2}";
+            return string.Format(path, textureName, type, "dds");
         }
 
         public static Dictionary<string, Shader> PrepareShader()
@@ -203,7 +184,7 @@ namespace MazeGame.Common
         {
             return new Camera3D
             {
-                target = new Vector3(1.5f, 0,+ 0.5f),
+                target = new Vector3(1.5f, 0, +0.5f),
                 up = new Vector3(0.0f, 1.0f, 0.0f),
                 position = Constants.DefaultOffset,
                 fovy = 45.0f,
@@ -211,7 +192,7 @@ namespace MazeGame.Common
             };
         }
 
-        public static void Drawtrangle(Vector3 direction, int originX, int originZ, int maxdepth, ref HashSet<(int, int)> drawList)
+        public static void Drawtrangle(Vector3 direction, int originX, int originZ, int maxdepth, Blocks[,] maze, ref HashSet<(int, int)> drawList)
         {
             var sinPhi = -direction.X;
             var cosPhi = -direction.Z;
@@ -219,14 +200,14 @@ namespace MazeGame.Common
             originX = (int)MathF.Round(originX - direction.X * 2, MidpointRounding.AwayFromZero);
             originZ = (int)MathF.Round(originZ - direction.Z * 2, MidpointRounding.AwayFromZero);
 
-            var halflength = (maxdepth) / 2f;
-            var dirx = (int)(direction.X * halflength);
-            var dirz = (int)(direction.Z * halflength);
+            var dirx = (int)(direction.X * maxdepth * 0.5);
+            var dirz = (int)(direction.Z * maxdepth * 0.5);
+            var tlength = maxdepth;
 
-            var pLeftX = dirx + (int)MathF.Round(((-cosPhi - sinPhi) * (halflength + 3)) + originX, MidpointRounding.AwayFromZero);
-            var pLeftZ = dirz + (int)MathF.Round(((sinPhi - cosPhi) * (halflength + 3)) + originZ, MidpointRounding.AwayFromZero);
-            var pRightX = dirx + (int)MathF.Round(((cosPhi - sinPhi) * (halflength + 3)) + originX, MidpointRounding.AwayFromZero);
-            var pRightZ = dirz + (int)MathF.Round(((-sinPhi - cosPhi) * (halflength + 3)) + originZ, MidpointRounding.AwayFromZero);
+            var pLeftX = dirx + (int)MathF.Round((-cosPhi - sinPhi) * tlength + originX, MidpointRounding.AwayFromZero);
+            var pLeftZ = dirz + (int)MathF.Round((sinPhi - cosPhi) * tlength + originZ, MidpointRounding.AwayFromZero);
+            var pRightX = dirx + (int)MathF.Round((cosPhi - sinPhi) * tlength + originX, MidpointRounding.AwayFromZero);
+            var pRightZ = dirz + (int)MathF.Round((-sinPhi - cosPhi) * tlength + originZ, MidpointRounding.AwayFromZero);
 
             var maxX = (int)MathF.Max(originX, Math.Max(pLeftX, pRightX));
             var minX = (int)MathF.Min(originX, Math.Min(pLeftX, pRightX));
@@ -246,14 +227,79 @@ namespace MazeGame.Common
                     var s = CrossProduct(q, vs2) / CrossProduct(vs1, vs2);
                     var t = CrossProduct(vs1, q) / CrossProduct(vs1, vs2);
 
+                    var cx = Clamp(x, Constants.Mazesize);
+                    var cz = Clamp(z, Constants.Mazesize);
                     if (!(s >= 0) || !(t >= 0) || !(s + t <= 1))
+                    {
+                        drawList.Remove((cx, cz));
                         continue;
-                    var cx = Tools.Clamp(x, Constants.Mazesize);
-                    var cz = Tools.Clamp(z, Constants.Mazesize);
-                    drawList.Add(((int)MathF.Round(cx, MidpointRounding.AwayFromZero), (int)MathF.Round(cz, MidpointRounding.AwayFromZero)));
+                    }
+
+                    if (IsNearRoom(cx, cz, maze))
+                        drawList.Add((cx, cz));
                 }
             }
         }
+
+        private static bool IsNearRoom(int x, int z, Blocks[,] maze)
+        {
+            for (var tx = -1; tx <= 1; tx++)
+            {
+                for (var tz = -1; tz <= 1; tz++)
+                {
+                    var cx = Clamp(x + tx, Constants.Mazesize);
+                    var cz = Clamp(z + tz, Constants.Mazesize);
+                    if (Blocks.Room <= maze[cx, cz])
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        //private static Blocks RoomDirections(int x, int z, Blocks[,] maze)
+        //{
+        //    int result = 0;
+
+        //    if (maze[Clamp(x - 1, Constants.Mazesize), z].Map(block => Blocks.Room <= block || ((int)block & (int)Directions.West) != 0))
+        //        result += (int)Directions.East;
+
+        //    if (maze[Clamp(x + 1, Constants.Mazesize), z].Map(block => Blocks.Room <= block || ((int)block & (int)Directions.East) != 0))
+        //        result += (int)Directions.West;
+
+        //    if (maze[x, Clamp(z - 1, Constants.Mazesize)].Map(block => Blocks.Room <= block || ((int)block & (int)Directions.South) != 0))
+        //        result += (int)Directions.North;
+
+        //    if (maze[x, Clamp(z + 1, Constants.Mazesize)].Map(block => Blocks.Room <= block || ((int)block & (int)Directions.North) != 0))
+        //        result += (int)Directions.South;
+
+        //    return (Blocks)result;
+        //}
+
+        private static readonly (int, int, Directions, Directions)[] Combinations = new[]
+        {
+            (-1, 0, Directions.East, Directions.West),
+            (1, 0, Directions.West, Directions.East),
+            (0, -1, Directions.North, Directions.South),
+            (0, 1, Directions.South, Directions.North),
+        };
+
+        private static Blocks RoomDirections(float x, float z, Blocks[,] maze)
+        {
+            int result = 0;
+            foreach (var combination in Combinations)
+            {
+                if (maze[(int)Clamp(x + combination.Item1, Constants.Mazesize),
+                        (int)Clamp(z + combination.Item2, Constants.Mazesize)]
+                    .Map(block => Blocks.Room <= block || ((int)block & (int)combination.Item4) != 0))
+                    result += (int)combination.Item3;
+            }
+            return (Blocks)result;
+        }
+
+
         private static float CrossProduct(Vector2 v1, Vector2 v2)
             => (v1.X * v2.Y) - (v1.Y * v2.X);
 
@@ -268,7 +314,7 @@ namespace MazeGame.Common
 
             var cam = campos < Constants.Mazesize * 0.5f;
 
-            var ccam = Tools.Clamp(campos, Constants.Mazesize) is < Constants.Mazesize * 0.25f or > Constants.Mazesize * 0.75f;
+            var ccam = Clamp(campos, Constants.Mazesize) is < Constants.Mazesize * 0.25f or > Constants.Mazesize * 0.75f;
 
             var result = drawpos + Constants.Mazesize * ((draw && !cam && ccam) ? 1.0f : (!draw && cam && ccam) ? -1.0f : 0.0f);
 
@@ -277,9 +323,9 @@ namespace MazeGame.Common
 
         public static float DrawOffsetByQuadrantUi(float drawpos)
         {
-            drawpos = Tools.Clamp(drawpos, Constants.Mazesize);
+            drawpos = Clamp(drawpos, Constants.Mazesize);
 
-            return (drawpos >= Constants.Mazesize * 0.5f) ? drawpos - Constants.Mazesize: drawpos;
+            return (drawpos >= Constants.Mazesize * 0.5f) ? drawpos - Constants.Mazesize : drawpos;
         }
     }
 }

@@ -10,7 +10,12 @@ namespace MazeGame.Loops
     {
         public void Draw()
         {
-            throw new NotImplementedException();
+
+        }
+
+        public void Dispose()
+        {
+
         }
     }
 }

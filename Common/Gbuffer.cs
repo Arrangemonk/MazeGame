@@ -91,6 +91,46 @@ namespace MazeGame.Common
             return target;
         }
 
+        public void Begin(MultiRenderTexture target)
+        {
+            Rlgl.rlDrawRenderBatchActive();
+            Rlgl.rlEnableFramebuffer(target.Id);
+
+            Rlgl.rlClearColor(127, 127, 127, 255);
+            Rlgl.rlClearScreenBuffers();
+
+            Rlgl.rlViewport(0, 0, target.Width, target.Height);
+
+            Rlgl.rlMatrixMode(MatrixMode.PROJECTION);
+            Rlgl.rlLoadIdentity();
+
+            Rlgl.rlOrtho(0.0, (double)target.Width, (double)target.Height, 0.0, 0.0, 1.0);
+
+            Rlgl.rlMatrixMode(MatrixMode.MODELVIEW);
+            Rlgl.rlLoadIdentity();
+
+            Rlgl.rlDisableColorBlend();
+        }
+
+        public void End(MultiRenderTexture target)
+        {
+            Rlgl.rlDrawRenderBatchActive();
+            Rlgl.rlDisableFramebuffer();
+
+            Rlgl.rlViewport(0, 0, target.Width, target.Height);
+
+            Rlgl.rlMatrixMode(MatrixMode.PROJECTION);
+            Rlgl.rlLoadIdentity();
+
+            Rlgl.rlOrtho(0.0, (double)target.Width, (double)target.Height, 0.0, 0.0, 1.0);
+
+            Rlgl.rlMatrixMode(MatrixMode.MODELVIEW);
+            Rlgl.rlLoadIdentity();
+
+            Rlgl.rlEnableColorBlend();
+        }
+
+
         // Unload multi render texture from GPU memory (VRAM)
         public static void UnloadRenderTexture(MultiRenderTexture target)
         {

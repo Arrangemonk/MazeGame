@@ -13,30 +13,38 @@ namespace MazeGame
         public static GameState State = GameState.Starting;
         public static void Main()
         {
+            Raylib.SetConfigFlags(ConfigFlags.FLAG_MSAA_4X_HINT);
             Raylib.InitWindow(sizex, sizey, "Maze Game");
             var monitor = Raylib.GetCurrentMonitor();
             Raylib.SetTargetFPS(Raylib.GetMonitorRefreshRate(monitor) *2);
 
-            //var startupLoop = new StartupLoop();
-            //var menuLoop = new MenuLoop();
+            var startupLoop = new StartupLoop();
+            var menuLoop = new MenuLoop();
             var gameLoop = new GameLoop();
 
+            var starttime = DateTime.Now;
             Raylib.DisableCursor();
             while (!Raylib.WindowShouldClose())
             {
-            //    switch (State)
-            //    {
-            //        case GameState.Starting:
-            //            startupLoop.Draw();
-            //            break;
-            //        case GameState.Menu:
-            //            menuLoop.Draw();
-            //            break;
-            //        case GameState.Game:
+                switch (State)
+                {
+                    case GameState.Starting:
+                        if (DateTime.Now > starttime + TimeSpan.FromSeconds(2))
+                        {
+                            State = GameState.Game;
+                        }
+                        startupLoop.Draw();
+                        break;
+                    case GameState.Menu:
+                        menuLoop.Draw();
+                        break;
+                    case GameState.Game:
                         gameLoop.Draw();
-                //        break;
-                //}
+                        break;
+                }
             }
+            startupLoop.Dispose();
+            menuLoop.Dispose();
             gameLoop.Dispose();
             Raylib.CloseWindow();
         }

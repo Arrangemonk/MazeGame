@@ -1,37 +1,78 @@
 #version 330
+#define MAXITERATIONS 200
 in vec2 fragTexCoord;
 in vec4 fragColor;
 in vec3 fragNormal;
 in vec3 fragPosition;
 in vec4 fragTangent;
+uniform vec3 lightPos;
+uniform vec3 viewPos;
+
 uniform sampler2D diffuse;
 uniform sampler2D specular;
+uniform sampler2D heightMap;
 uniform sampler2D normalMap;
+
 uniform vec4 colDiffuse;
-uniform vec3 lightPos;
 uniform mat4 matModel;
 uniform mat4 matNormal;
-uniform vec3 viewPos;
 out vec4 finalColor;
+
+#define PARALAX_INTENSITY 0.015
+#define PARALAX_QUALITY 16.0
+
+vec2 parallax( in vec2 uv, in vec3 view )
+{   
+    float numLayers = PARALAX_QUALITY;
+    float layerDepth = 1.0 / numLayers;
+    vec2 p = view.xy  * PARALAX_INTENSITY / (2.0-view.z);
+    vec2 deltaUVs = p / numLayers;
+    float Texd = texture(heightMap,uv).r;
+    float d = 0.0;
+    int i = 0;
+    while( d < Texd && i < PARALAX_QUALITY)
+    {
+        i++;
+        uv -= deltaUVs;
+        Texd = texture(heightMap,uv).r;
+        d += layerDepth;  
+    }
+
+    vec2 lastUVs = uv + deltaUVs;
+    
+    float after = Texd - d;
+    float before = texture(heightMap,uv).r - d + layerDepth;
+    
+    float w = after / (after - before);
+    
+    return mix( uv, lastUVs, w );
+}
+
+
 void main()
 {
-vec4 texel = texture(diffuse, fragTexCoord);
-vec3 texelColor = texel.xyz;
-vec3 normalColor = texture(normalMap, fragTexCoord).xyz * 2.0 - 1.0;
-float specularIntensity = texture(specular, fragTexCoord).x;
+vec3 viewDir = normalize(viewPos - fragPosition);
 vec3 worldNormal = normalize(fragNormal * transpose(mat3(matNormal)));
 vec3 tangent = normalize(matNormal * fragTangent).xyz;
 vec3 binormal = normalize(cross(worldNormal, tangent)).xyz;
 mat3 TBN = mat3(tangent, binormal, worldNormal);
+vec2 UVs = parallax(fragTexCoord,viewDir*TBN);
 TBN = transpose(TBN);
+
+vec4 texel = texture(diffuse, UVs);
+vec3 texelColor = texel.xyz;
+vec3 normalColor = texture(normalMap, UVs).xyz * 2.0 - 1.0;
+vec3 specularColor = texture(specular, UVs).xyz;
+
 vec3 normal = normalize(normalColor*TBN);
 vec3 lightDir = normalize(lightPos - fragPosition);
-float shading = clamp(dot(normal, lightDir), 0.0, 1.0);
+
+float shading = clamp(dot(normal, lightDir), 0.0, 1.0);// * (0.8/clamp(distance(fragPosition,lightPos),1.0,0.0));
 vec3 diffuse = shading * texelColor;
-vec3 viewDir = normalize(viewPos - fragPosition);
+
 vec3 reflectDir = reflect(-lightDir, normal);
-float spec = pow(clamp(dot(viewDir, reflectDir), 0.1, 1.0), 8);
-vec3 specular = specularIntensity * spec * texelColor.xyz;
+float spec = pow(clamp(dot(viewDir, reflectDir), 0.1, 0.8), 8);
+vec3 specular = specularColor * spec;
 finalColor = vec4(diffuse + specular, 1.0);
 
 //if(fragPosition.y < -0.2){

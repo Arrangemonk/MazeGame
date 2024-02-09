@@ -30,6 +30,7 @@
     <None Remove="resources\models\wall.obj" />
     <None Remove="resources\shaders\normal_mapping.fs.glsl" />
     <None Remove="resources\shaders\normal_mapping.vs.glsl" />
+    <None Remove="resources\shaders\normal_mapping_instanced.fs.glsl" />
     <None Remove="resources\textures\brick_diff.dds" />
     <None Remove="resources\textures\brick_disp.dds" />
     <None Remove="resources\textures\brick_normal.dds" />
@@ -76,6 +77,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\models\stairs.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="resources\shaders\normal_mapping_instanced.fs.glsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\textures\moss_diff.dds">
@@ -151,6 +155,18 @@
     <None Update="resources\aripro_presents_Maze.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="resources\audio\footsteps.ogg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\audio\footsteps_reverb.ogg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\audio\noisefloor.ogg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\audio\super strange ambient.ogg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="resources\mazeblocks_16.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -199,13 +215,25 @@
     <None Update="resources\models\spiderweb.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="resources\models\spiderweb_modeled.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="resources\models\upwards_pipe.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="resources\models\upwards_stairs.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\shaders\deferred.fs.glsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\shaders\deferred.vs.glsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\shaders\gbuffer.fs.glsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\shaders\gbuffer.vs.glsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\shaders\normal_mapping_instanced.vs.glsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="resources\textures\2k\exit_diff.jpg">
@@ -377,6 +405,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="resources\textures\pipe_spec.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\textures\stairs_disp.dds">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="resources\textures\stairs_specl.dds">

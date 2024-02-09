@@ -12,11 +12,13 @@ using MazeGame.Algorithms;
 using Microsoft.VisualBasic;
 using Raylib_cs;
 using static System.Net.Mime.MediaTypeNames;
+using Image = Raylib_cs.Image;
+using System.Runtime.Intrinsics.Arm;
 
 namespace MazeGame.Common
 {
 
-    public static class Tools
+    public static unsafe class Tools
     {
         public static T2 Map<T1, T2>(this T1 input, Func<T1, T2> method) => method(input);
 
@@ -27,16 +29,16 @@ namespace MazeGame.Common
 
         public const float Pi = (float)Math.PI;
 
-        public static Dictionary<Blocks, Rectangle[]> boxes = MazeGenerator.PrepareMazeCollosion();
+        public static Dictionary<Blocks, Rectangle[]> Boxes = MazeGenerator.PrepareMazeCollosion();
         public static (Vector3, Vector3) Collision(Vector3 oldPos, Vector3 newPos, Vector3 oldTgt, Vector3 newTgt, Blocks[,] maze)
         {
-            var (newtile,x,z) = GetIile(newPos.X, newPos.Z, maze);
+            var (newtile, x, z) = GetIile(newPos.X, newPos.Z, maze);
             var (oldxtile, oldx, dz) = GetIile(oldPos.X, newPos.Z, maze);
             var (oldztile, dx, oldz) = GetIile(newPos.X, oldPos.Z, maze);
 
-            var cxz = boxes[newtile].Aggregate(false, (current, box) => current || CheckCollition(new Vector2(x, z), box));
-            var coldx = boxes[oldxtile].Aggregate(false, (current, box) => current || CheckCollition(new Vector2(oldx, z), box));
-            var coldz = boxes[oldztile].Aggregate(false, (current, box) => current || CheckCollition(new Vector2(x, oldz), box));
+            var cxz = Boxes[newtile].Aggregate(false, (current, box) => current || Raylib.CheckCollisionPointRec(new Vector2(x, z), box));
+            var coldx = Boxes[oldxtile].Aggregate(false, (current, box) => current || Raylib.CheckCollisionPointRec(new Vector2(oldx, z), box));
+            var coldz = Boxes[oldztile].Aggregate(false, (current, box) => current || Raylib.CheckCollisionPointRec(new Vector2(x, oldz), box));
 
             var canMoveX = (!cxz || !coldz);
             var canMoveZ = (!cxz || !coldx);
@@ -50,13 +52,43 @@ namespace MazeGame.Common
 
         }
 
-        private static bool CheckCollition(Vector2 point, Rectangle box)
+        public static Matrix4x4 TranslateMatrix(Vector3 vector) => Raymath.MatrixTranslate(vector.X, vector.Y, vector.Z);
+
+        public static Dictionary<string, Image> PrepareImages()
         {
-            return box.x <= point.X && point.X <= box.x + box.width
-                && box.y <= point.Y && point.Y <= box.y + box.height;
+            var result = new Dictionary<string, Image>();
+            foreach (var file in new DirectoryInfo("resources/textures").GetFiles("*.dds"))
+            {
+                result.Add(Path.GetFileNameWithoutExtension(file.Name), Raylib.LoadImage(file.FullName));
+            }
+
+            foreach (var file in new DirectoryInfo("resources/textures/brick").GetFiles("*.dds"))
+            {
+                result.Add(Path.Combine("brick", Path.GetFileNameWithoutExtension(file.Name)), Raylib.LoadImage(file.FullName));
+            }
+
+            return result;
+
         }
 
-        private static (Blocks,float,float) GetIile(float xIn, float zIn, Blocks[,] maze)
+        public static Color ColorLerp(Color first, Color second, float amount)
+        {
+            var neg = 1.0 - amount;
+            return new Color(
+                (int)(first.r * amount + second.r * neg),
+                (int)(first.g * amount + second.g * neg),
+                (int)(first.b * amount + second.b * neg),
+                (int)(first.a * amount + second.a * neg));
+
+        }
+
+        //private static bool CheckCollition(Vector2 point, Rectangle box)
+        //{
+        //    return box.x <= point.X && point.X <= box.x + box.width
+        //        && box.y <= point.Y && point.Y <= box.y + box.height;
+        //}
+
+        private static (Blocks, float, float) GetIile(float xIn, float zIn, Blocks[,] maze)
         {
             var tx = Clamp(xIn, Constants.Mazesize);
             var tz = Clamp(zIn, Constants.Mazesize);
@@ -94,81 +126,82 @@ namespace MazeGame.Common
 
 
 
-        public static Model PrepareModel(string modelName, string textureName, Shader shader, Matrix4x4 transform, ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref List<Model> models)
+        public static Model PrepareModel(string modelName, string textureName, Shader shader, Matrix4x4 transform, ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref Dictionary<string, Image> images, ref List<Model> models)
         {
-            unsafe
+
+
+            const string diff = nameof(diff);
+            const string normal = nameof(normal);
+            const string spec = nameof(spec);
+            const string disp = nameof(disp);
+
+            var model = Raylib.LoadModel($"resources/models/{modelName}.obj");
+            models.Add(model);
+
+            Texture2D d, n, s, h;
+
+            var usedName = images.Keys.Contains(GetTexturePath(Path.Combine(textureName, textureName), diff))
+                ? Path.Combine(textureName, textureName)
+                : images.Keys.Contains(GetTexturePath(modelName, diff))
+                    ? modelName
+                    : textureName;
+
+            if (!textures.ContainsKey(usedName))
             {
-                const string diff = nameof(diff);
-                const string normal = nameof(normal);
-                const string spec = nameof(spec);
-                const string disp = nameof(disp);
-
-                var model = Raylib.LoadModel($"resources/models/{modelName}.obj");
-                models.Add(model);
-
-                Texture2D d, n, s, h;
-
-                var usedName = File.Exists(getTexturePath(Path.Combine(textureName, textureName), diff))
-                    ? Path.Combine(textureName, textureName)
-                    : File.Exists(getTexturePath(modelName, diff))
-                        ? modelName
-                        : textureName;
-
-                if (!textures.ContainsKey(usedName))
-                {
-                    var texture = new Dictionary<string, Texture2D>();
-                    d = MountTexture(usedName, diff, ref texture);
-                    n = MountTexture(usedName, normal, ref texture);
-                    s = MountTexture(usedName, spec, ref texture);
-                    h = MountTexture(usedName, disp, ref texture);
-                    textures.Add(usedName, texture);
-                }
-                else
-                {
-                    var texture = textures[usedName];
-                    d = texture[diff];
-                    n = texture[normal];
-                    s = texture[spec];
-                    h = texture[disp];
-                }
-
-                model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_DIFFUSE].texture = d;
-                model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_NORMAL].texture = n;
-                model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_SPECULAR].texture = s;
-                model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_HEIGHT].texture = h;
-
-                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = Raylib.GetShaderLocation(shader, "diffuse");
-                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = Raylib.GetShaderLocation(shader, "specular");
-                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = Raylib.GetShaderLocation(shader, "normalMap");
-                shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = Raylib.GetShaderLocation(shader, "heightMap");
-                model.materials[0].shader = shader;
-                model.transform = transform;
-                Raylib.GenMeshTangents(model.meshes);
-                return model;
+                var texture = new Dictionary<string, Texture2D>();
+                d = MountTexture(usedName, diff, ref texture, ref images);
+                n = MountTexture(usedName, normal, ref texture, ref images);
+                s = MountTexture(usedName, spec, ref texture, ref images);
+                h = MountTexture(usedName, disp, ref texture, ref images);
+                textures.Add(usedName, texture);
             }
+            else
+            {
+                var texture = textures[usedName];
+                d = texture[diff];
+                n = texture[normal];
+                s = texture[spec];
+                h = texture[disp];
+            }
+
+            model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_DIFFUSE].texture = d;
+            model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_NORMAL].texture = n;
+            model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_SPECULAR].texture = s;
+            model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_HEIGHT].texture = h;
+
+            shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = Raylib.GetShaderLocation(shader, "diffuse");
+            shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = Raylib.GetShaderLocation(shader, "specular");
+            shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = Raylib.GetShaderLocation(shader, "normalMap");
+            shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = Raylib.GetShaderLocation(shader, "heightMap");
+            model.materials[0].shader = shader;
+            model.transform = transform;
+            Raylib.GenMeshTangents(model.meshes);
+            return model;
+
         }
 
-        private static Texture2D MountTexture(string textureName, string type, ref Dictionary<string, Texture2D> textures)
+        private static Texture2D MountTexture(string textureName, string type, ref Dictionary<string, Texture2D> textures, ref Dictionary<string, Image> images)
         {
-            var texture = Raylib.LoadTexture(getTexturePath(textureName, type));
+            var texture = Raylib.LoadTextureFromImage(images[GetTexturePath(textureName, type)]);
             Raylib.SetTextureFilter(texture, TextureFilter.TEXTURE_FILTER_TRILINEAR);
             Raylib.GenTextureMipmaps(ref texture);
             textures.Add(type, texture);
             return texture;
         }
 
-        private static string getTexturePath(string textureName, string type)
+        private static string GetTexturePath(string textureName, string type)
         {
-            const string path = "resources/textures/{0}_{1}.{2}";
-            return string.Format(path, textureName, type, "dds");
+            const string path = "{0}_{1}";
+            return string.Format(path, textureName, type);
         }
 
         public static Dictionary<string, Shader> PrepareShader()
         {
             var result = new Dictionary<string, Shader>();
             LoadIfExists(result, "normal_mapping");
-            LoadIfExists(result, "geom");
-            // result.Add("geom");
+            LoadIfExists(result, "normal_mapping_instanced");
+            //LoadIfExists(result, "deferred");
+            //LoadIfExists(result, "gbuffer");
 
             return result;
         }
@@ -177,8 +210,14 @@ namespace MazeGame.Common
         {
             const string path = "resources/shaders/";
             if (File.Exists($"{path}{name}.vs.glsl"))
-                result.Add(name, Raylib.LoadShader($"{path}{name}.vs.glsl", $"{path}{name}.fs.glsl"));
+            {
+                var shader = Raylib.LoadShader($"{path}{name}.vs.glsl", $"{path}{name}.fs.glsl");
+                result.Add(name, shader);
+
+            }
+
         }
+
 
         public static Camera3D CameraSetup()
         {
@@ -192,54 +231,56 @@ namespace MazeGame.Common
             };
         }
 
-        public static void Drawtrangle(Vector3 direction, int originX, int originZ, int maxdepth, Blocks[,] maze, ref HashSet<(int, int)> drawList)
+        public static void ResetCamera(ref Camera3D camera, Blocks block)
+        {
+            var dirs = MazeGenerator.DirectionsFromblock(block).ToArray();
+            var dx = MazeGenerator.Dx(dirs.FirstOrDefault(dir => ((int)dir & (int)Blocks.Horizontal) != 0, Directions.North));
+            var dz = dx != 0 ? 0 : MazeGenerator.Dy(dirs.FirstOrDefault(dir => ((int)dir & (int)Blocks.Vertical) != 0, Directions.East));
+
+            camera.position = Constants.DefaultOffset;
+            camera.target = new Vector3(dx + 0.5f, 0, dz + 0.5f);
+            camera.up = new Vector3(0.0f, 1.0f, 0.0f);
+        }
+
+        public static void Drawtrangle(Vector3 direction, float originX, float originZ, float maxdepth, Blocks[,] maze, ref HashSet<(int, int)> drawList)
         {
             var sinPhi = -direction.X;
             var cosPhi = -direction.Z;
 
-            originX = (int)MathF.Round(originX - direction.X * 2, MidpointRounding.AwayFromZero);
-            originZ = (int)MathF.Round(originZ - direction.Z * 2, MidpointRounding.AwayFromZero);
+            originX = originX - direction.X * 2f;
+            originZ = originZ - direction.Z * 2f;
 
-            var dirx = (int)(direction.X * maxdepth * 0.5);
-            var dirz = (int)(direction.Z * maxdepth * 0.5);
+            var dirx = (direction.X * maxdepth * 0.5f);
+            var dirz = (direction.Z * maxdepth * 0.5f);
             var tlength = maxdepth;
 
-            var pLeftX = dirx + (int)MathF.Round((-cosPhi - sinPhi) * tlength + originX, MidpointRounding.AwayFromZero);
-            var pLeftZ = dirz + (int)MathF.Round((sinPhi - cosPhi) * tlength + originZ, MidpointRounding.AwayFromZero);
-            var pRightX = dirx + (int)MathF.Round((cosPhi - sinPhi) * tlength + originX, MidpointRounding.AwayFromZero);
-            var pRightZ = dirz + (int)MathF.Round((-sinPhi - cosPhi) * tlength + originZ, MidpointRounding.AwayFromZero);
+            var pLeftX = dirx + (-cosPhi - sinPhi) * tlength + originX;
+            var pLeftZ = dirz + (sinPhi - cosPhi) * tlength + originZ;
+            var pRightX = dirx + (cosPhi - sinPhi) * tlength + originX;
+            var pRightZ = dirz + (-sinPhi - cosPhi) * tlength + originZ;
 
-            var maxX = (int)MathF.Max(originX, Math.Max(pLeftX, pRightX));
-            var minX = (int)MathF.Min(originX, Math.Min(pLeftX, pRightX));
-            var maxY = (int)MathF.Max(originZ, Math.Max(pLeftZ, pRightZ));
-            var minY = (int)MathF.Min(originZ, Math.Min(pLeftZ, pRightZ));
 
-            /* spanning vectors of edge (v1,v2) and (v1,v3) */
-            var vs1 = new Vector2(pLeftX - originX, pLeftZ - originZ);
-            var vs2 = new Vector2(pRightX - originX, pRightZ - originZ);
+            var tmpdrawlist = new List<(int, int)>();
 
-            for (var x = minX; x <= maxX; x++)
-            {
-                for (var z = minY; z <= maxY; z++)
+            Trangle.DrawTriangle(new Vector2(originX, originZ), new Vector2(pLeftX, pLeftZ), new Vector2(pRightX, pRightZ),
+                (x1, x2, z) =>
                 {
-                    var q = new Vector2(x - originX, z - originZ);
-
-                    var s = CrossProduct(q, vs2) / CrossProduct(vs1, vs2);
-                    var t = CrossProduct(vs1, q) / CrossProduct(vs1, vs2);
-
-                    var cx = Clamp(x, Constants.Mazesize);
-                    var cz = Clamp(z, Constants.Mazesize);
-                    if (!(s >= 0) || !(t >= 0) || !(s + t <= 1))
+                    if (x1 > x2)
+                        (x1, x2) = (x2, x1);
+                    for (var x = x1; x <= x2; x++)
                     {
-                        drawList.Remove((cx, cz));
-                        continue;
+                        if (IsNearRoom(Clamp(x,Constants.Mazesize), z, maze))
+                            tmpdrawlist.Add(Clamp((x, z),Constants.Mazesize));
                     }
 
-                    if (IsNearRoom(cx, cz, maze))
-                        drawList.Add((cx, cz));
-                }
-            }
+                });
+
+            foreach (var e in tmpdrawlist)
+                drawList.Add(e);
         }
+
+
+
 
         private static bool IsNearRoom(int x, int z, Blocks[,] maze)
         {

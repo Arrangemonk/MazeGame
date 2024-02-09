@@ -310,7 +310,7 @@ namespace MazeGame.Algorithms
         }
 
         public static Dictionary<Blocks, Model> PrepareMazeParts(Shader shader, string basepath,
-            ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref List<Model> models)
+            ref Dictionary<string, Dictionary<string, Texture2D>> textures,ref Dictionary<string, Image> images, ref List<Model> models)
         {
             var rot000 = Matrix4x4.Identity;
             var rot090 = Matrix4x4.CreateRotationY(Tools.Pi * .5f);
@@ -325,67 +325,67 @@ namespace MazeGame.Algorithms
 
             var result = new Dictionary<Blocks, Model>
             {
-                { Blocks.Horizontal, Tools.PrepareModel(Path.Combine(basepath,straight), basepath, shader, rot090, ref textures,ref models) },
-                { Blocks.Vertical, Tools.PrepareModel(Path.Combine(basepath,straight), basepath, shader, rot000, ref textures, ref models) },
-                { Blocks.CornerNorhEast, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot180, ref textures, ref models) },
-                { Blocks.CornerNorthWest, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot270, ref textures, ref models) },
-                { Blocks.CornderSouthEast, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot090, ref textures, ref models) },
-                { Blocks.CornerSouthWest, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot000, ref textures, ref models) },
-                { Blocks.TcrossHorizontalNorth, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot180, ref textures, ref models) },
-                { Blocks.TcrossHorizontalSouth, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot000, ref textures, ref models) },
-                { Blocks.TcrossVerticalEast, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot090, ref textures, ref models) },
-                { Blocks.TcrossVerticalWest, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot270, ref textures, ref models) },
-                { Blocks.EndNorth, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot180, ref textures, ref models) },
-                { Blocks.EndSouth, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot000, ref textures, ref models) },
-                { Blocks.EndEast, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot090, ref textures, ref models) },
-                { Blocks.EndWest, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot270, ref textures, ref models) },
-                { Blocks.Cross, Tools.PrepareModel(Path.Combine(basepath,cross), basepath, shader, rot180, ref textures, ref models) },
-                { Blocks.Undefined,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot180, ref textures, ref models) },
-                { Blocks.Room,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot000, ref textures, ref models) },
-                { Blocks.RoomBlocked,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot000, ref textures, ref models)}
+                { Blocks.Horizontal, Tools.PrepareModel(Path.Combine(basepath,straight), basepath, shader, rot090, ref textures,ref images,ref models) },
+                { Blocks.Vertical, Tools.PrepareModel(Path.Combine(basepath,straight), basepath, shader, rot000, ref textures, ref images,ref models) },
+                { Blocks.CornerNorhEast, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot180, ref textures, ref images,ref models) },
+                { Blocks.CornerNorthWest, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot270, ref textures, ref images,ref models) },
+                { Blocks.CornderSouthEast, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot090, ref textures, ref images,ref models) },
+                { Blocks.CornerSouthWest, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot000, ref textures, ref images,ref models) },
+                { Blocks.TcrossHorizontalNorth, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot180, ref textures, ref images,ref models) },
+                { Blocks.TcrossHorizontalSouth, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot000, ref textures, ref images,ref models) },
+                { Blocks.TcrossVerticalEast, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot090, ref textures, ref images,ref models) },
+                { Blocks.TcrossVerticalWest, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot270, ref textures, ref images,ref models) },
+                { Blocks.EndNorth, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot180, ref textures, ref images,ref models) },
+                { Blocks.EndSouth, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot000, ref textures, ref images,ref models) },
+                { Blocks.EndEast, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot090, ref textures, ref images,ref models) },
+                { Blocks.EndWest, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot270, ref textures, ref images,ref models) },
+                { Blocks.Cross, Tools.PrepareModel(Path.Combine(basepath,cross), basepath, shader, rot180, ref textures, ref images,ref models) },
+                { Blocks.Undefined,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot180, ref textures, ref images,ref models) },
+                { Blocks.Room,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot000, ref textures, ref images,ref models) },
+                { Blocks.RoomBlocked,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot000, ref textures, ref images,ref models)}
             };
             return result;
         }
 
-        public static Dictionary<Blocks, Model> PrepareUpwardsParts(Shader shader,
-    ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref List<Model> models)
-        {
-            var rot000 = Matrix4x4.Identity;
-            var rot090 = Matrix4x4.CreateRotationY(Tools.Pi * .5f);
-            var rot180 = Matrix4x4.CreateRotationY(Tools.Pi);
-            var rot270 = Matrix4x4.CreateRotationY(Tools.Pi * -.5f);
-            const string upwards_pipe = nameof(upwards_pipe);
-            const string pipe = nameof(pipe);
+    //    public static Dictionary<Blocks, Model> PrepareUpwardsParts(Shader shader,
+    //ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref List<Model> models)
+    //    {
+    //        var rot000 = Matrix4x4.Identity;
+    //        var rot090 = Matrix4x4.CreateRotationY(Tools.Pi * .5f);
+    //        var rot180 = Matrix4x4.CreateRotationY(Tools.Pi);
+    //        var rot270 = Matrix4x4.CreateRotationY(Tools.Pi * -.5f);
+    //        const string upwards_pipe = nameof(upwards_pipe);
+    //        const string pipe = nameof(pipe);
 
-            var result = new Dictionary<Blocks, Model>
-            {
-                { Blocks.Hozup, Tools.PrepareModel(upwards_pipe, pipe, shader, rot090, ref textures,ref models) },
-                { Blocks.Vertup, Tools.PrepareModel(upwards_pipe, pipe, shader, rot000, ref textures, ref models) },
-                { Blocks.Hozdown, Tools.PrepareModel(upwards_pipe, pipe, shader, rot270, ref textures,ref models) },
-                { Blocks.Vertdown, Tools.PrepareModel(upwards_pipe, pipe, shader, rot180, ref textures, ref models) },
-            };
-            return result;
-        }
+    //        var result = new Dictionary<Blocks, Model>
+    //        {
+    //            { Blocks.Hozup, Tools.PrepareModel(upwards_pipe, pipe, shader, rot090, ref textures,ref models) },
+    //            { Blocks.Vertup, Tools.PrepareModel(upwards_pipe, pipe, shader, rot000, ref textures, ref models) },
+    //            { Blocks.Hozdown, Tools.PrepareModel(upwards_pipe, pipe, shader, rot270, ref textures,ref models) },
+    //            { Blocks.Vertdown, Tools.PrepareModel(upwards_pipe, pipe, shader, rot180, ref textures, ref models) },
+    //        };
+    //        return result;
+    //    }
 
-        public static Dictionary<Blocks, Model> PrepareStairsParts(Shader shader,
-            ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref List<Model> models)
-        {
-            var rot000 = Matrix4x4.Identity;
-            var rot090 = Matrix4x4.CreateRotationY(Tools.Pi * .5f);
-            var rot180 = Matrix4x4.CreateRotationY(Tools.Pi);
-            var rot270 = Matrix4x4.CreateRotationY(Tools.Pi * -.5f);
-            const string upwards_stairs = nameof(upwards_stairs);
-            const string plaster = nameof(plaster);
+        //public static Dictionary<Blocks, Model> PrepareStairsParts(Shader shader,
+        //    ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref List<Model> models)
+        //{
+        //    var rot000 = Matrix4x4.Identity;
+        //    var rot090 = Matrix4x4.CreateRotationY(Tools.Pi * .5f);
+        //    var rot180 = Matrix4x4.CreateRotationY(Tools.Pi);
+        //    var rot270 = Matrix4x4.CreateRotationY(Tools.Pi * -.5f);
+        //    const string upwards_stairs = nameof(upwards_stairs);
+        //    const string plaster = nameof(plaster);
 
-            var result = new Dictionary<Blocks, Model>
-            {
-                { Blocks.Hozup, Tools.PrepareModel(upwards_stairs, plaster, shader, rot090, ref textures,ref models) },
-                { Blocks.Vertup, Tools.PrepareModel(upwards_stairs, plaster, shader, rot000, ref textures, ref models) },
-                { Blocks.Hozdown, Tools.PrepareModel(upwards_stairs, plaster, shader, rot270, ref textures,ref models) },
-                { Blocks.Vertdown, Tools.PrepareModel(upwards_stairs, plaster, shader, rot180, ref textures, ref models) },
-            };
-            return result;
-        }
+        //    var result = new Dictionary<Blocks, Model>
+        //    {
+        //        { Blocks.Hozup, Tools.PrepareModel(upwards_stairs, plaster, shader, rot090, ref textures,ref models) },
+        //        { Blocks.Vertup, Tools.PrepareModel(upwards_stairs, plaster, shader, rot000, ref textures, ref models) },
+        //        { Blocks.Hozdown, Tools.PrepareModel(upwards_stairs, plaster, shader, rot270, ref textures,ref models) },
+        //        { Blocks.Vertdown, Tools.PrepareModel(upwards_stairs, plaster, shader, rot180, ref textures, ref models) },
+        //    };
+        //    return result;
+        //}
 
         public static Dictionary<Blocks, Rectangle> PrepareMazePrint(int size)
         {

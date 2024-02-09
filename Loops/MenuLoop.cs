@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MazeGame.Loops
 {
-    internal class MenuLoop
+    public class MenuLoop
     {
         public void Draw()
         {

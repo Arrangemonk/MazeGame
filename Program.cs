@@ -11,43 +11,56 @@ namespace MazeGame
         private static int sizex = 1920;
         private static int sizey = 1080;
         public static GameState State = GameState.Starting;
+        public static GameLoop _gameLoop;
+        public static MenuLoop _menuLoop;
         public static void Main()
         {
             Raylib.SetConfigFlags(ConfigFlags.FLAG_MSAA_4X_HINT);
             Raylib.InitWindow(sizex, sizey, "Maze Game");
+            Raylib.InitAudioDevice();
             var monitor = Raylib.GetCurrentMonitor();
             Raylib.SetTargetFPS(Raylib.GetMonitorRefreshRate(monitor) *2);
-
             var startupLoop = new StartupLoop();
-            var menuLoop = new MenuLoop();
-            var gameLoop = new GameLoop();
+            _gameLoop = new GameLoop();
+            var task = _gameLoop.StartInit();
+            _menuLoop = new MenuLoop();
 
-            var starttime = DateTime.Now;
             Raylib.DisableCursor();
+            var startTime = DateTime.Now;
             while (!Raylib.WindowShouldClose())
             {
                 switch (State)
                 {
                     case GameState.Starting:
-                        if (DateTime.Now > starttime + TimeSpan.FromSeconds(2))
+                        startupLoop.Draw();
+
+                        if (DateTime.Now > startTime + TimeSpan.FromSeconds(4))//&& Program._gameLoop.Inialized)
                         {
+                            _gameLoop.FinishInit(task);
                             State = GameState.Game;
                         }
-                        startupLoop.Draw();
+
                         break;
                     case GameState.Menu:
-                        menuLoop.Draw();
+                        _menuLoop.Draw();
                         break;
                     case GameState.Game:
-                        gameLoop.Draw();
+                        _gameLoop.Draw();
                         break;
                 }
             }
             startupLoop.Dispose();
-            menuLoop.Dispose();
-            gameLoop.Dispose();
+            _menuLoop.Dispose();
+            _gameLoop.Dispose();
+            Raylib.CloseAudioDevice();
             Raylib.CloseWindow();
         }
+
+        //private static async Task Create()
+        //{
+        //    gameLoop = new GameLoop();
+        //    menuLoop = new MenuLoop();
+        //}
 
         public static void Togglefullscreen()
         {

@@ -91,7 +91,8 @@ namespace MazeGame.Common
             return target;
         }
 
-        public void Begin(MultiRenderTexture target)
+
+        public static void Begin(MultiRenderTexture target)
         {
             Rlgl.rlDrawRenderBatchActive();
             Rlgl.rlEnableFramebuffer(target.Id);
@@ -112,7 +113,7 @@ namespace MazeGame.Common
             Rlgl.rlDisableColorBlend();
         }
 
-        public void End(MultiRenderTexture target)
+        public static void End(MultiRenderTexture target)
         {
             Rlgl.rlDrawRenderBatchActive();
             Rlgl.rlDisableFramebuffer();
@@ -141,7 +142,7 @@ namespace MazeGame.Common
                 Rlgl.rlUnloadTexture(target.TexSpecular.id);
                 Rlgl.rlUnloadTexture(target.TexNormal.id);
                 Rlgl.rlUnloadTexture(target.TexPosition.id);
-
+                Rlgl.rlUnloadTexture(target.TexDepth.id);
                 // NOTE: Depth texture is automatically queried
                 // and deleted before deleting framebuffer
                 Rlgl.rlUnloadFramebuffer(target.Id);

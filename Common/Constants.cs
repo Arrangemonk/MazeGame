@@ -14,6 +14,7 @@ internal static class Constants
     public const float Ticks = 60;
     public static readonly Vector3 DefaultOffset = new(0.5f, 0, 0.5f);
     public static readonly Vector3 Maxcam = new(Constants.Mazesize, 1, Constants.Mazesize);
+    public static float TOLERANCE = 0.1f;
 }
 
 public enum GameState

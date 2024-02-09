@@ -48,6 +48,19 @@ vec2 parallax( in vec2 uv, in vec3 view )
     return mix( uv, lastUVs, w );
 }
 
+float noise(vec2 pos, float evolve) {
+    
+    // Loop the evolution (over a very long period of time).
+    float e = fract((evolve*0.01));
+    
+    // Coordinates
+    float cx  = pos.x*e;
+    float cy  = pos.y*e;
+    
+    // Generate a "random" black or white value
+    return fract(23.0*fract(2.0/fract(fract(cx*2.4/cy*23.0+pow(abs(cy/22.4),3.3))*fract(cx*evolve/pow(abs(cy),0.050)))));
+}
+
 
 void main()
 {
@@ -84,6 +97,7 @@ const vec4 fogColor = vec4(0.0,0.0,0.0, 1.0);
 const float fogDensity = 0.3;
 float fogFactor = 1.0/exp((dist*fogDensity)*(dist*fogDensity));
 fogFactor = clamp(fogFactor, 0.0, 1.0);
+float n = clamp(noise(fragTexCoord,20.0) * 0.2,0,0.2);
 finalColor = mix(fogColor, finalColor, fogFactor);
 
 }

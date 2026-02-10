@@ -66,13 +66,13 @@ namespace MazeGame.Common
 
         private static void FillBottomFlatTriangle(Vector2 v1, Vector2 v2, Vector2 v3, Action<int, int, int> drawScanline)
         {
-            float invslope1 = (v2.X - v1.X) / (v2.Y - v1.Y);
-            float invslope2 = (v3.X - v1.X) / (v3.Y - v1.Y);
+            var invslope1 = (v2.X - v1.X) / (v2.Y - v1.Y);
+            var invslope2 = (v3.X - v1.X) / (v3.Y - v1.Y);
 
-            float curx1 = v1.X;
-            float curx2 = v1.X;
+            var curx1 = v1.X;
+            var curx2 = v1.X;
 
-            for (int scanlineY = (int)v1.Y; scanlineY <= (int)MathF.Ceiling(v2.Y); scanlineY++)
+            for (var scanlineY = (int)v1.Y; scanlineY <= (int)MathF.Ceiling(v2.Y); scanlineY++)
             {
                 drawScanline((int)curx1, (int)MathF.Ceiling(curx2), scanlineY);
                 curx1 += invslope1;
@@ -82,13 +82,13 @@ namespace MazeGame.Common
 
         private static void FillTopFlatTriangle(Vector2 v1, Vector2 v2, Vector2 v3, Action<int, int, int> drawScanline)
         {
-            float invslope1 = (v3.X - v1.X) / (v3.Y - v1.Y);
-            float invslope2 = (v3.X - v2.X) / (v3.Y - v2.Y);
+            var invslope1 = (v3.X - v1.X) / (v3.Y - v1.Y);
+            var invslope2 = (v3.X - v2.X) / (v3.Y - v2.Y);
 
-            float curx1 = v3.X;
-            float curx2 = v3.X;
+            var curx1 = v3.X;
+            var curx2 = v3.X;
 
-            for (int scanlineY = (int)MathF.Ceiling(v3.Y); scanlineY > (int)v1.Y; scanlineY--)
+            for (var scanlineY = (int)MathF.Ceiling(v3.Y); scanlineY > (int)v1.Y; scanlineY--)
             {
                 drawScanline((int)MathF.Ceiling(curx1), (int)curx2, scanlineY);
                 curx1 -= invslope1;
@@ -114,7 +114,7 @@ namespace MazeGame.Common
             }
             else
             {
-                Vector2 v4 = v2 with { X = v1.X + ((v2.Y - v1.Y) / (v3.Y - v1.Y)) * (v3.X - v1.X) };
+                var v4 = v2 with { X = v1.X + ((v2.Y - v1.Y) / (v3.Y - v1.Y)) * (v3.X - v1.X) };
                 FillBottomFlatTriangle( v1, v2, v4, drawScanline);
                 FillTopFlatTriangle( v2, v4, v3, drawScanline);
             }

@@ -1,12 +1,14 @@
 #version 330
-#define MAXITERATIONS 200
 in vec2 fragTexCoord;
 in vec4 fragColor;
 in vec3 fragNormal;
 in vec3 fragPosition;
 in vec4 fragTangent;
+in mat3 TBN;
+
 uniform vec3 lightPos;
 uniform vec3 viewPos;
+uniform float time;
 
 uniform sampler2D diffuse;
 uniform sampler2D specular;
@@ -16,36 +18,46 @@ uniform sampler2D normalMap;
 uniform vec4 colDiffuse;
 uniform mat4 matModel;
 uniform mat4 matNormal;
+uniform vec4 fogColor;
+uniform vec2 resolution;
+
 out vec4 finalColor;
 
-#define PARALAX_INTENSITY 0.015
-#define PARALAX_QUALITY 16.0
+#define PARALAX_INTENSITY 0.01
 
-vec2 parallax( in vec2 uv, in vec3 view )
-{   
-    float numLayers = PARALAX_QUALITY;
-    float layerDepth = 1.0 / numLayers;
-    vec2 p = view.xy  * PARALAX_INTENSITY / (2.0-view.z);
-    vec2 deltaUVs = p / numLayers;
-    float Texd = texture(heightMap,uv).r;
-    float d = 0.0;
-    int i = 0;
-    while( d < Texd && i < PARALAX_QUALITY)
+#define PARALAX_QUALITY 256.0
+
+vec2 parallax(
+    vec2 v_uv,
+    vec3 v_viewDir_TS,
+    sampler2D heightMap)
+{
+    vec3 viewDir = normalize(v_viewDir_TS);
+    vec2 v_totalDisplacement = viewDir.xy * PARALAX_INTENSITY;
+    vec2 v_stepSize = v_totalDisplacement / PARALAX_QUALITY;
+    float f_depthSliceSize = 1.0 / PARALAX_QUALITY;
+    vec2 v_currentUV = v_uv;
+    float f_currentDepth = 1.0;
+    float f_currentHeight = 0.0;
+
+    for (int i = 0; i < PARALAX_QUALITY; ++i)
     {
-        i++;
-        uv -= deltaUVs;
-        Texd = texture(heightMap,uv).r;
-        d += layerDepth;  
+        f_currentDepth -= f_depthSliceSize;
+        v_currentUV += v_stepSize;
+        f_currentHeight = texture(heightMap, v_currentUV).r;
+        if (f_currentHeight > f_currentDepth)
+        {
+            break;
+        }
     }
+    vec2 v_prevUV = v_currentUV - v_stepSize;
+    float f_prevHeight = texture(heightMap, v_prevUV).r;
+    float f_prevDepth = f_currentDepth + f_depthSliceSize;
+    float f_deltaH = f_currentHeight - f_prevHeight;
+    float f_deltaD = f_currentDepth - f_prevDepth;
+    float t = (f_currentDepth - f_currentHeight) / (f_deltaH - f_deltaD);
 
-    vec2 lastUVs = uv + deltaUVs;
-    
-    float after = Texd - d;
-    float before = texture(heightMap,uv).r - d + layerDepth;
-    
-    float w = after / (after - before);
-    
-    return mix( uv, lastUVs, w );
+    return v_currentUV - v_stepSize * t;
 }
 
 float noise(vec2 pos, float evolve) {
@@ -65,12 +77,8 @@ float noise(vec2 pos, float evolve) {
 void main()
 {
 vec3 viewDir = normalize(viewPos - fragPosition);
-vec3 worldNormal = normalize(fragNormal * transpose(mat3(matNormal)));
-vec3 tangent = normalize(matNormal * fragTangent).xyz;
-vec3 binormal = normalize(cross(worldNormal, tangent)).xyz;
-mat3 TBN = mat3(tangent, binormal, worldNormal);
-vec2 UVs = parallax(fragTexCoord,viewDir*TBN);
-TBN = transpose(TBN);
+//vec2 UVs = parallax(fragTexCoord,viewDir * TBN, heightMap);
+vec2 UVs = fragTexCoord;
 
 vec4 texel = texture(diffuse, UVs);
 vec3 texelColor = texel.xyz;
@@ -84,20 +92,23 @@ float shading = clamp(dot(normal, lightDir), 0.0, 1.0);// * (0.8/clamp(distance(
 vec3 diffuse = shading * texelColor;
 
 vec3 reflectDir = reflect(-lightDir, normal);
+vec3 reflectDir2 = reflect(lightDir, normal);
 float spec = pow(clamp(dot(viewDir, reflectDir), 0.1, 0.8), 8);
-vec3 specular = specularColor * spec;
+float spec2 = pow(clamp(dot(viewDir, reflectDir2), 0.1, 0.8), 8);
+vec3 specular = specularColor * (spec + spec2);
 finalColor = vec4(diffuse + specular, 1.0);
 
-//if(fragPosition.y < -0.2){
-//    finalColor = vec4(0,0.2,0.6,1.0);
-//}
 float dist = length(viewPos - fragPosition);
-//const vec4 fogColor = vec4(0.05, 0.1, 0.055, 1.0);
-const vec4 fogColor = vec4(0.0,0.0,0.0, 1.0);
 const float fogDensity = 0.3;
 float fogFactor = 1.0/exp((dist*fogDensity)*(dist*fogDensity));
 fogFactor = clamp(fogFactor, 0.0, 1.0);
-float n = clamp(noise(fragTexCoord,20.0) * 0.2,0,0.2);
+
+vec2 uv = fragTexCoord / resolution;
+
+//float f = noise(uv * 4.0,time);
+//finalColor -= clamp(f *.2, 0, 0.2);
+//vec3 nc = specular;
+//finalColor = vec4(nc,1.0);
 finalColor = mix(fogColor, finalColor, fogFactor);
 
 }

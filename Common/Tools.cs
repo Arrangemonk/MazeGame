@@ -1,19 +1,27 @@
-﻿using System;
-using System.IO;
+﻿using MazeGame.Algorithms;
+using Microsoft.VisualBasic;
+using Raylib_CSharp;
+using Raylib_CSharp.Camera.Cam3D;
+using Raylib_CSharp.Collision;
+using Raylib_CSharp.Colors;
+using Raylib_CSharp.Geometry;
+using Raylib_CSharp.Images;
+using Raylib_CSharp.Materials;
+using Raylib_CSharp.Shaders;
+using Raylib_CSharp.Textures;
+using Raylib_CSharp.Transformations;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 using System.Xml.XPath;
-using MazeGame.Algorithms;
-using Microsoft.VisualBasic;
-using Raylib_cs;
-using static System.Net.Mime.MediaTypeNames;
-using Image = Raylib_cs.Image;
-using System.Runtime.Intrinsics.Arm;
+using static System.Net.WebRequestMethods;
 
 namespace MazeGame.Common
 {
@@ -22,10 +30,6 @@ namespace MazeGame.Common
     {
         public static T2 Map<T1, T2>(this T1 input, Func<T1, T2> method) => method(input);
 
-        public static Color ColorFromFloat(float r, float g, float b, float a)
-        {
-            return new Color((int)(r * 255f), (int)(g * 255f), (int)(b * 255f), (int)(a * 255f));
-        }
 
         public const float Pi = (float)Math.PI;
 
@@ -36,9 +40,9 @@ namespace MazeGame.Common
             var (oldxtile, oldx, dz) = GetIile(oldPos.X, newPos.Z, maze);
             var (oldztile, dx, oldz) = GetIile(newPos.X, oldPos.Z, maze);
 
-            var cxz = Boxes[newtile].Aggregate(false, (current, box) => current || Raylib.CheckCollisionPointRec(new Vector2(x, z), box));
-            var coldx = Boxes[oldxtile].Aggregate(false, (current, box) => current || Raylib.CheckCollisionPointRec(new Vector2(oldx, z), box));
-            var coldz = Boxes[oldztile].Aggregate(false, (current, box) => current || Raylib.CheckCollisionPointRec(new Vector2(x, oldz), box));
+            var cxz = Boxes[newtile].Aggregate(false, (current, box) => current || ShapeHelper.CheckCollisionPointRec(new Vector2(x, z), box));
+            var coldx = Boxes[oldxtile].Aggregate(false, (current, box) => current || ShapeHelper.CheckCollisionPointRec(new Vector2(oldx, z), box));
+            var coldz = Boxes[oldztile].Aggregate(false, (current, box) => current || ShapeHelper.CheckCollisionPointRec(new Vector2(x, oldz), box));
 
             var canMoveX = (!cxz || !coldz);
             var canMoveZ = (!cxz || !coldx);
@@ -52,19 +56,19 @@ namespace MazeGame.Common
 
         }
 
-        public static Matrix4x4 TranslateMatrix(Vector3 vector) => Raymath.MatrixTranslate(vector.X, vector.Y, vector.Z);
+        public static Matrix4x4 TranslateMatrix(Vector3 vector) => Matrix4x4.CreateTranslation(vector.X, vector.Y, vector.Z);
 
         public static Dictionary<string, Image> PrepareImages()
         {
             var result = new Dictionary<string, Image>();
             foreach (var file in new DirectoryInfo("resources/textures").GetFiles("*.dds"))
             {
-                result.Add(Path.GetFileNameWithoutExtension(file.Name), Raylib.LoadImage(file.FullName));
+                result.Add(Path.GetFileNameWithoutExtension(file.Name),Image.Load(file.FullName));
             }
 
             foreach (var file in new DirectoryInfo("resources/textures/brick").GetFiles("*.dds"))
             {
-                result.Add(Path.Combine("brick", Path.GetFileNameWithoutExtension(file.Name)), Raylib.LoadImage(file.FullName));
+                result.Add(Path.Combine("brick", Path.GetFileNameWithoutExtension(file.Name)), Image.Load(file.FullName));
             }
 
             return result;
@@ -75,10 +79,10 @@ namespace MazeGame.Common
         {
             var neg = 1.0 - amount;
             return new Color(
-                (int)(first.r * amount + second.r * neg),
-                (int)(first.g * amount + second.g * neg),
-                (int)(first.b * amount + second.b * neg),
-                (int)(first.a * amount + second.a * neg));
+                (byte)(first.R * amount + second.R * neg),
+                (byte)(first.G * amount + second.G * neg),
+                (byte)(first.B * amount + second.B * neg),
+                (byte)(first.A * amount + second.A * neg));
 
         }
 
@@ -126,16 +130,16 @@ namespace MazeGame.Common
 
 
 
-        public static Model PrepareModel(string modelName, string textureName, Shader shader, Matrix4x4 transform, ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref Dictionary<string, Image> images, ref List<Model> models)
+        public static Model PrepareModel(string modelName, string textureName, Shader shader, Matrix4x4 transform, ref Dictionary<string, Dictionary<string, Texture2D>> textures, ref Dictionary<string, Image> images, ref List<Model> models,Color? fogColor = null)
         {
-
+            fogColor = fogColor ?? Color.Black;
 
             const string diff = nameof(diff);
             const string normal = nameof(normal);
             const string spec = nameof(spec);
             const string disp = nameof(disp);
 
-            var model = Raylib.LoadModel($"resources/models/{modelName}.obj");
+            var model = Model.Load($"resources/models/{modelName}.obj");
             models.Add(model);
 
             Texture2D d, n, s, h;
@@ -164,27 +168,34 @@ namespace MazeGame.Common
                 h = texture[disp];
             }
 
-            model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_DIFFUSE].texture = d;
-            model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_NORMAL].texture = n;
-            model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_SPECULAR].texture = s;
-            model.materials[0].maps[(int)MaterialMapIndex.MATERIAL_MAP_HEIGHT].texture = h;
+            shader.Locs[(int)ShaderLocationIndex.MapAlbedo] = shader.GetLocation("diffuse");
+            shader.Locs[(int)ShaderLocationIndex.ColorSpecular] = shader.GetLocation("specular");
+            shader.Locs[(int)ShaderLocationIndex.MapNormal] = shader.GetLocation("normalMap");
+            shader.Locs[(int)ShaderLocationIndex.MapHeight] = shader.GetLocation("heightMap");
+            shader.Locs[(int)ShaderLocationIndex.ColorDiffuse] = shader.GetLocation("fogColor");
 
-            shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = Raylib.GetShaderLocation(shader, "diffuse");
-            shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = Raylib.GetShaderLocation(shader, "specular");
-            shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = Raylib.GetShaderLocation(shader, "normalMap");
-            shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = Raylib.GetShaderLocation(shader, "heightMap");
-            model.materials[0].shader = shader;
-            model.transform = transform;
-            Raylib.GenMeshTangents(model.meshes);
+            model.Materials[0].Maps[(int)MaterialMapIndex.Diffuse].Texture = d;
+            model.Materials[0].Maps[(int)MaterialMapIndex.Diffuse].Color = fogColor.Value;
+            model.Materials[0].Maps[(int)MaterialMapIndex.Normal].Texture = n;
+            model.Materials[0].Maps[(int)MaterialMapIndex.Specular].Texture = s;
+            model.Materials[0].Maps[(int)MaterialMapIndex.Height].Texture = h;
+
+            model.Materials[0].Shader = shader;
+            model.Transform = transform;
+            foreach (var mesh in model.Meshes)
+            {
+                mesh.GenTangents();
+            }
             return model;
 
         }
 
         private static Texture2D MountTexture(string textureName, string type, ref Dictionary<string, Texture2D> textures, ref Dictionary<string, Image> images)
         {
-            var texture = Raylib.LoadTextureFromImage(images[GetTexturePath(textureName, type)]);
-            Raylib.SetTextureFilter(texture, TextureFilter.TEXTURE_FILTER_TRILINEAR);
-            Raylib.GenTextureMipmaps(ref texture);
+            Console.WriteLine($"loading texture: {GetTexturePath(textureName, type)}");
+            var texture = Texture2D.LoadFromImage(images[GetTexturePath(textureName, type)]);
+            texture.SetFilter(TextureFilter.Trilinear);
+            texture.GenMipmaps();
             textures.Add(type, texture);
             return texture;
         }
@@ -209,9 +220,9 @@ namespace MazeGame.Common
         private static void LoadIfExists(Dictionary<string, Shader> result, string name)
         {
             const string path = "resources/shaders/";
-            if (File.Exists($"{path}{name}.vs.glsl"))
+            if (System.IO.File.Exists($"{path}{name}.vs.glsl"))
             {
-                var shader = Raylib.LoadShader($"{path}{name}.vs.glsl", $"{path}{name}.fs.glsl");
+                var shader = Shader.Load($"{path}{name}.vs.glsl", $"{path}{name}.fs.glsl");
                 result.Add(name, shader);
 
             }
@@ -223,11 +234,11 @@ namespace MazeGame.Common
         {
             return new Camera3D
             {
-                target = new Vector3(1.5f, 0, +0.5f),
-                up = new Vector3(0.0f, 1.0f, 0.0f),
-                position = Constants.DefaultOffset,
-                fovy = 45.0f,
-                projection = CameraProjection.CAMERA_PERSPECTIVE,
+                Target = new Vector3(1.5f, 0, +0.5f),
+                Up = new Vector3(0.0f, 1.0f, 0.0f),
+                Position = Constants.DefaultOffset,
+                FovY = 45.0f,
+                Projection = CameraProjection.Perspective,
             };
         }
 
@@ -237,9 +248,9 @@ namespace MazeGame.Common
             var dx = MazeGenerator.Dx(dirs.FirstOrDefault(dir => ((int)dir & (int)Blocks.Horizontal) != 0, Directions.North));
             var dz = dx != 0 ? 0 : MazeGenerator.Dy(dirs.FirstOrDefault(dir => ((int)dir & (int)Blocks.Vertical) != 0, Directions.East));
 
-            camera.position = Constants.DefaultOffset;
-            camera.target = new Vector3(dx + 0.5f, 0, dz + 0.5f);
-            camera.up = new Vector3(0.0f, 1.0f, 0.0f);
+            camera.Position = Constants.DefaultOffset;
+            camera.Target = new Vector3(dx + 0.5f, 0, dz + 0.5f);
+            camera.Up = new Vector3(0.0f, 1.0f, 0.0f);
         }
 
         public static void Drawtrangle(Vector3 direction, float originX, float originZ, float maxdepth, Blocks[,] maze, ref HashSet<(int, int)> drawList)

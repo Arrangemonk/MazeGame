@@ -1,17 +1,29 @@
 ﻿using MazeGame.Algorithms;
-using Raylib_cs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 using MazeGame.Algorithms;
 using MazeGame.Common;
-using Raylib_cs;
+using Raylib_CSharp;
+using Raylib_CSharp.Audio;
+using Raylib_CSharp.Camera.Cam3D;
+using Raylib_CSharp.Collision;
+using Raylib_CSharp.Colors;
+using Raylib_CSharp.Geometry;
+using Raylib_CSharp.Images;
+using Raylib_CSharp.Interact;
+using Raylib_CSharp.Rendering;
+using Raylib_CSharp.Shaders;
+using Raylib_CSharp.Textures;
+using Raylib_CSharp.Transformations;
+using Raylib_CSharp.Windowing;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.Metrics;
+using System.Linq;
+using System.Numerics;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace MazeGame.Loops
 {
@@ -40,7 +52,8 @@ namespace MazeGame.Loops
         private Camera3D camera;
 
         private int lightPosLoc;
-        private int specularPosLoc;
+        private int viewPosLoc;
+        private int timePosLoc;
         private int instancePosLoc;
         private int instanceLightPosLoc;
         private int instanceSpecularPosLoc;
@@ -53,8 +66,7 @@ namespace MazeGame.Loops
         private bool collision = true;
         private Music backroundNoise;
         private Music footsteps;
-        //private Gbuffer.MultiRenderTexture mrt;
-        public static float Tickscale => Constants.Ticks / Raylib.GetFPS().Map(a => Math.Max(Math.Min(a, 120), 15));
+        public static float Tickscale => Constants.Ticks / Time.GetFPS().Map(a => Math.Max(Math.Min(a, 120), 15));
         private int maxdepth = 7;
         public bool Inialized = false;
         private bool moving = false;
@@ -67,15 +79,15 @@ namespace MazeGame.Loops
             //mrt = Gbuffer.LoadMultiRenderTexture(Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
 
 
-            Raylib.DisableCursor();
+            Input.DisableCursor();
         }
 
         public Task StartInit()
         {
             return Task.Run(() =>
             {
-                backroundNoise = Raylib.LoadMusicStream("resources/audio/super strange ambient.ogg");
-                footsteps = Raylib.LoadMusicStream("resources/audio/footsteps.ogg");
+                backroundNoise = Music.Load("resources/audio/super strange ambient.ogg");
+                footsteps = Music.Load("resources/audio/footsteps.ogg");
                 images = Tools.PrepareImages();
             });
         }
@@ -85,38 +97,41 @@ namespace MazeGame.Loops
             task.Wait();
 
             var modelshader = shader["normal_mapping"];
-            var instanceshader = shader["normal_mapping_instanced"];
+            //var instanceshader = shader["normal_mapping_instanced"];
 
-            transit = Tools.PrepareModel("stairs", "stairs", modelshader, Matrix4x4.Identity, ref textures, ref images, ref models);
+           
+
+            transit = Tools.PrepareModel("stairs", "stairs", modelshader, Matrix4x4.Identity, ref textures, ref images, ref models, Constants.ClsColor);
             //wall = Tools.PrepareModel("wall", "pipe", modelshader, Matrix4x4.Identity, ref textures, ref images, ref models);
             spiderweb = Tools.PrepareModel("spiderweb", "spiderweb", modelshader, Matrix4x4.Identity, ref textures, ref images, ref models);
-            moss = Tools.PrepareModel("moss", "moss", modelshader, Matrix4x4.Identity, ref textures, ref images, ref models);
-            mud = Tools.PrepareModel("floor", "mud", modelshader, Matrix4x4.Identity, ref textures, ref images, ref models);
-            mazeblocks = Raylib.LoadTexture($"resources/mazeblocks_{Constants.Blocksize}.png");
+            moss = Tools.PrepareModel("moss", "moss", modelshader, Matrix4x4.Identity, ref textures, ref images, ref models, Constants.ClsColor);
+            mud = Tools.PrepareModel("floor", "mud", modelshader, Matrix4x4.Identity, ref textures, ref images, ref models, Constants.ClsColor);
+            mazeblocks = Texture2D.Load($"resources/mazeblocks_{Constants.Blocksize}.png");
             tileset = MazeGenerator.PrepareMazePrint(Constants.Blocksize);
-            parts = MazeGenerator.PrepareMazeParts(modelshader, "brick", ref textures, ref images, ref models);
+            parts = MazeGenerator.PrepareMazeParts(modelshader, "brick", ref textures, ref images, ref models, Constants.ClsColor);
             //_parts = MazeGenerator.PrepareMazeParts(_modelshader, "concrete", ref _textures, ref _models);
             //upipe = MazeGenerator.PrepareUpwardsParts(modelshader, ref textures, ref models);
             //ustairs = MazeGenerator.PrepareStairsParts(modelshader, ref textures, ref models);
 
             camera = Tools.CameraSetup();
             ResetMaze();
-            lightPosLoc = Raylib.GetShaderLocation(modelshader, "lightPos");
-            specularPosLoc = Raylib.GetShaderLocation(modelshader, "viewPos");
-            instanceLightPosLoc = Raylib.GetShaderLocation(modelshader, "lightPos");
-            instanceSpecularPosLoc = Raylib.GetShaderLocation(modelshader, "viewPos");
-            instancePosLoc = Raylib.GetShaderLocationAttrib(modelshader, "instanceTransform");
-            instanceshader.locs[(int)ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = Raylib.GetShaderLocationAttrib(instanceshader, "instanceTransform");
-            Raylib.PlayMusicStream(backroundNoise);
+            lightPosLoc = modelshader.GetLocation("lightPos");
+            viewPosLoc = modelshader.GetLocation("viewPos");
+            timePosLoc = modelshader.GetLocation("time");
+            //instanceLightPosLoc = modelshader.GetLocation("lightPos");
+            //instanceSpecularPosLoc = modelshader.GetLocation("viewPos");
+            //instancePosLoc = Raylib.GetShaderLocationAttrib(modelshader, "instanceTransform");
+            //instanceshader.locs[(int)ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = Raylib.GetShaderLocationAttrib(instanceshader, "instanceTransform");
+            backroundNoise.PlayStream();
             PrepareMazeTexture();
         }
 
         private void PrepareMazeTexture()
         {
             var size = Constants.Mazesize * Constants.Blocksize;
-            mazeTexture = Raylib.LoadRenderTexture(size, size);
+            mazeTexture = RenderTexture2D.Load(size, size);
 
-            Raylib.BeginTextureMode(mazeTexture);
+            Graphics.BeginTextureMode(mazeTexture);
             for (var z = 0; z < Constants.Mazesize; z++)
                 for (var x = 0; x < Constants.Mazesize; x++)
                 {
@@ -131,18 +146,18 @@ namespace MazeGame.Loops
                         var nleft = left < Blocks.Room && ((int)left & (int)Directions.West) == 0;
 
                         var rect = MazeGenerator.Mazerect((ntop && nleft) ? 0 : nleft ? 1 : ntop ? 2 : 4, 0, Constants.Blocksize);
-                        Raylib.DrawTextureRec(mazeblocks, rect, dpos, Color.WHITE);
+                        Graphics.DrawTextureRec(mazeblocks, rect, dpos, Color.White);
                     }
                     else
                     {
-                        Raylib.DrawTextureRec(mazeblocks, tileset[tile], dpos, Color.WHITE);
+                        Graphics.DrawTextureRec(mazeblocks, tileset[tile], dpos, Color.White);
                     }
                 }
 
 
-            Raylib.EndTextureMode();
-            Raylib.GenTextureMipmaps(ref mazeTexture.texture);
-            Raylib.SetTextureFilter(mazeTexture.texture, TextureFilter.TEXTURE_FILTER_BILINEAR);
+            Graphics.EndTextureMode();
+            mazeTexture.Texture.GenMipmaps();
+            mazeTexture.Texture.SetFilter(TextureFilter.Bilinear);
         }
 
         public void Draw()
@@ -150,54 +165,39 @@ namespace MazeGame.Loops
             ProcessAudio();
             ProcessInputs();
             UpdateCamera();
-            Raylib.BeginDrawing();
-            //Gbuffer.Begin(mrt);
-            Raylib.ClearBackground(Constants.ClsColor);
-            Raylib.BeginMode3D(camera);
+            Graphics.BeginDrawing();
+            Graphics.ClearBackground(Constants.ClsColor);
+            Graphics.BeginMode3D(camera);
             var tiles = DrawLevel();
-            Raylib.EndMode3D();
+            Graphics.EndMode3D();
             DrawMazeOverlay(tiles);
-            //Gbuffer.End(mrt);
-
-            //Raylib.BeginDrawing();
-            //Raylib.ClearBackground(Constants.ClsColor);
-            //Raylib.BeginShaderMode(shader["deferred"]);
-
-            //shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = Raylib.GetShaderLocation(shader, "diffuse");
-            //shader.locs[(int)ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = Raylib.GetShaderLocation(shader, "specular");
-            //shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = Raylib.GetShaderLocation(shader, "normalMap");
-            //shader.locs[(int)ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = Raylib.GetShaderLocation(shader, "heightMap");
-
-            //Raylib.DrawTextureRec(mrt.TexAlbedo, new Rectangle(0, 0, mrt.Width, -mrt.Height), Vector2.Zero, Color.WHITE);
-
-            //Raylib.EndShaderMode();
-            Raylib.EndDrawing();
+            Graphics.EndDrawing();
         }
 
         private void ProcessAudio()
         {
             if (moving)
             {
-                if (!Raylib.IsMusicStreamPlaying(footsteps))
-                    Raylib.PlayMusicStream(footsteps);
+                if (!footsteps.IsStreamPlaying())
+                    footsteps.PlayStream();
             }
             else
             {
-                if (Raylib.IsMusicStreamPlaying(footsteps))
-                    Raylib.StopMusicStream(footsteps);
+                if (footsteps.IsStreamPlaying())
+                    footsteps.StopStream();
             }
 
-            Raylib.UpdateMusicStream(backroundNoise);
-            Raylib.UpdateMusicStream(footsteps);
+            backroundNoise.UpdateStream();
+            footsteps.UpdateStream();
         }
 
         private void ProcessInputs()
         {
-            var key = (KeyboardKey)Raylib.GetKeyPressed();
+            var key = (KeyboardKey)Input.GetKeyPressed();
 
             switch (key)
             {
-                case KeyboardKey.KEY_F3:
+                case KeyboardKey.F3:
                     {
                         const string screenshots = nameof(screenshots);
                         if (!Directory.Exists(screenshots))
@@ -205,28 +205,28 @@ namespace MazeGame.Loops
                         Raylib.TakeScreenshot($"{screenshots}/{Guid.NewGuid()}.png");
                         break;
                     }
-                case KeyboardKey.KEY_R:
+                case KeyboardKey.R:
                     ResetMaze();
                     break;
-                case KeyboardKey.KEY_F1:
+                case KeyboardKey.F1:
                     displayOverlay = !displayOverlay;
                     break;
-                case KeyboardKey.KEY_F2:
+                case KeyboardKey.F2:
                     wireframe = !wireframe;
                     break;
-                case KeyboardKey.KEY_UP:
+                case KeyboardKey.Up:
                     maxdepth++;
                     break;
-                case KeyboardKey.KEY_DOWN:
+                case KeyboardKey.Down:
                     maxdepth--;
                     break;
-                case KeyboardKey.KEY_F4:
+                case KeyboardKey.F4:
                     Program.Togglefullscreen();
                     break;
-                case KeyboardKey.KEY_F5:
+                case KeyboardKey.F5:
                     render3d = !render3d;
                     break;
-                case KeyboardKey.KEY_F6:
+                case KeyboardKey.F6:
                     collision = !collision;
                     break;
             }
@@ -234,7 +234,7 @@ namespace MazeGame.Loops
 
         private void ResetMaze()
         {
-            oldpos = camera.position = Constants.DefaultOffset;
+            oldpos = camera.Position = Constants.DefaultOffset;
             maze = MazeGenerator.GenerateMaze(Constants.Mazesize, Constants.Mazesize);
             randoms = MazeGenerator.GenerateRandomIntegers(Constants.Mazesize, Constants.Mazesize);
             PrepareMazeTexture();
@@ -246,58 +246,55 @@ namespace MazeGame.Loops
             float cameraMoveSpeed = 0.03f * Tickscale;
             float cameraMouseMoveSensitivity = 0.003f * Tickscale;
 
-            var mousePositionDelta = Raylib.GetMouseDelta();
+            var mousePositionDelta = Input.GetMouseDelta();
             var cam = camera;
             moving = false;
             unsafe
             {
 
-                if (Raylib.IsKeyDown(KeyboardKey.KEY_W))
+                if (Input.IsKeyDown(KeyboardKey.W))
                 {
-                    Raylib.CameraMoveForward(&cam, cameraMoveSpeed, true);
+                    cam.MoveForward(cameraMoveSpeed,true);
                     moving = true;
                 }
 
-                if (Raylib.IsKeyDown(KeyboardKey.KEY_A))
+                if (Input.IsKeyDown(KeyboardKey.A))
                 {
-                    Raylib.CameraMoveRight(&cam, -cameraMoveSpeed, true);
+                    cam.MoveRight(-cameraMoveSpeed, true);
                     moving = true;
                 }
 
-                if (Raylib.IsKeyDown(KeyboardKey.KEY_S))
+                if (Input.IsKeyDown(KeyboardKey.S))
                 {
-                    Raylib.CameraMoveForward(&cam, -cameraMoveSpeed, true);
+                    cam.MoveForward(-cameraMoveSpeed, true);
                     moving = true;
                 }
 
-                if (Raylib.IsKeyDown(KeyboardKey.KEY_D))
+                if (Input.IsKeyDown(KeyboardKey.D))
                 {
-                    Raylib.CameraMoveRight(&cam, cameraMoveSpeed, true);
+                    cam.MoveRight(cameraMoveSpeed, true);
                     moving = true;
                 }
 
                 if (collision)
-                    (cam.position, cam.target) = Tools.Collision(oldpos, cam.position, oldtarget, cam.target, maze);
+                    (cam.Position, cam.Target) = Tools.Collision(oldpos, cam.Position, oldtarget, cam.Target, maze);
 
-                var relativetarget = Vector3.Normalize(cam.target - cam.position);
+                var relativetarget = Vector3.Normalize(cam.Target - cam.Position);
 
-                cam.position = Tools.Clamp(cam.position, Constants.Maxcam);
+                cam.Position = Tools.Clamp(cam.Position, Constants.Maxcam);
 
-                cam.target = cam.position + relativetarget;
+                cam.Target = cam.Position + relativetarget;
 
-                Raylib.CameraYaw(&cam, -mousePositionDelta.X * cameraMouseMoveSensitivity, false);
-                Raylib.CameraPitch(&cam, -mousePositionDelta.Y * cameraMouseMoveSensitivity, true, false, false);
+                cam.RotateYaw(-mousePositionDelta.X * cameraMouseMoveSensitivity, false);
+               cam.RotatePitch(-mousePositionDelta.Y * cameraMouseMoveSensitivity, true, false, false);
 
                 var modelshader = shader["normal_mapping"];
-                var instanceshader = shader["normal_mapping_instanced"];
-
-                Raylib.SetShaderValue(modelshader, lightPosLoc, Tools.DrawOffsetByQuadrant(Tools.Clamp(cam.position + relativetarget * 0.2f, Constants.Maxcam), cam.position), ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-                Raylib.SetShaderValue(modelshader, specularPosLoc, cam.position, ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-                Raylib.SetShaderValue(instanceshader, instanceLightPosLoc, Tools.DrawOffsetByQuadrant(Tools.Clamp(cam.position + relativetarget * 0.2f, Constants.Maxcam), cam.position), ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-                Raylib.SetShaderValue(instanceshader, instanceSpecularPosLoc, cam.position, ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-
-                oldpos = cam.position;
-                oldtarget = cam.target;
+                modelshader.SetValue( lightPosLoc, Tools.DrawOffsetByQuadrant(Tools.Clamp(cam.Position - relativetarget * 0.2f, Constants.Maxcam), cam.Position), ShaderUniformDataType.Vec3);
+                modelshader.SetValue( viewPosLoc, cam.Position, ShaderUniformDataType.Vec3);
+                modelshader.SetValue(timePosLoc,(float)Time.GetTime(), ShaderUniformDataType.Float);
+                modelshader.SetValue(modelshader.GetLocation("resolution"), new Vector2(Window.GetScreenWidth(), Window.GetScreenHeight()), ShaderUniformDataType.Vec2);
+                oldpos = cam.Position;
+                oldtarget = cam.Target;
 
             }
 
@@ -310,81 +307,81 @@ namespace MazeGame.Loops
             if (!displayOverlay)
                 return;
             var index = TileIndexFromCamera();
-            Raylib.DrawText(Raylib.GetFPS().ToString(), 12, 12, 20, Color.WHITE);
-            Raylib.DrawText($"{camera.position.X:0.000},{camera.position.Z:0.000}", 60, 12, 20, Color.WHITE);
-            Raylib.DrawText($"{index.Item1:0.000},{index.Item2:0.000}", 60, 32, 20, Color.WHITE);
-            Raylib.DrawText($"{tiles.Count} {maxdepth}", 220, 12, 20, Color.WHITE);
-            var startposx = Raylib.GetScreenWidth() / 2 - mazeTexture.texture.width / 2;
-            var startposy = Raylib.GetScreenHeight() / 2 - mazeTexture.texture.height / 2;
+            Graphics.DrawText(Time.GetFPS().ToString(), 12, 12, 20, Color.White);
+            Graphics.DrawText($"{camera.Position.X:0.000},{camera.Position.Z:0.000}", 60, 12, 20, Color.White);
+            Graphics.DrawText($"{index.Item1:0.000},{index.Item2:0.000}", 60, 32, 20, Color.White);
+            Graphics.DrawText($"{tiles.Count} {maxdepth}", 220, 12, 20, Color.White);
+            var startposx = Window.GetScreenWidth() / 2 - mazeTexture.Texture.Width / 2;
+            var startposy = Window.GetScreenHeight() / 2 - mazeTexture.Texture.Height / 2;
 
-            var camx = camera.position.X;
-            var camz = camera.position.Z;
+            var camx = camera.Position.X;
+            var camz = camera.Position.Z;
 
 
-            var cameradirection = Vector3.Normalize(camera.target - camera.position);
-            Raylib.DrawTexturePro(mazeTexture.texture,
-                new Rectangle(MathF.Floor(camx * Constants.Blocksize + mazeTexture.texture.width / 2f),
-                    MathF.Floor(-camz * Constants.Blocksize - mazeTexture.texture.height / 2f),
-                    mazeTexture.texture.width,
-                    -mazeTexture.texture.height),
-                new Rectangle(startposx, startposy, mazeTexture.texture.width, mazeTexture.texture.height),
+            var cameradirection = Vector3.Normalize(camera.Target - camera.Position);
+            Graphics.DrawTexturePro(mazeTexture.Texture,
+                new Rectangle(MathF.Floor(camx * Constants.Blocksize + mazeTexture.Texture.Width / 2f),
+                    MathF.Floor(-camz * Constants.Blocksize - mazeTexture.Texture.Height / 2f),
+                    mazeTexture.Texture.Width,
+                    -mazeTexture.Texture.Height),
+                new Rectangle(startposx, startposy, mazeTexture.Texture.Width, mazeTexture.Texture.Height),
                  new Vector2(0, 0),
                 0, new Color(255, 255, 255, 128));
             foreach (var tile in tiles)
             {
-                var dx = startposx + mazeTexture.texture.width / 2f + Tools.DrawOffsetByQuadrantUi(tile.Item1 - camx) * Constants.Blocksize;
-                var dy = startposy + mazeTexture.texture.height / 2f + Tools.DrawOffsetByQuadrantUi(tile.Item2 - camz) * Constants.Blocksize;
+                var dx = startposx + mazeTexture.Texture.Width / 2f + Tools.DrawOffsetByQuadrantUi(tile.Item1 - camx) * Constants.Blocksize;
+                var dy = startposy + mazeTexture.Texture.Height / 2f + Tools.DrawOffsetByQuadrantUi(tile.Item2 - camz) * Constants.Blocksize;
 
-                Raylib.DrawRectangle(
+                Graphics.DrawRectangle(
                     (int)dx,
                     (int)dy, Constants.Blocksize, Constants.Blocksize, new Color(0, 0, 255, 64));
             }
-            Raylib.DrawRectangle(
-                startposx + mazeTexture.texture.width / 2,
-                startposy + mazeTexture.texture.height / 2, Constants.Blocksize - 2, Constants.Blocksize - 2, Color.RED);
+            Graphics.DrawRectangle(
+                startposx + mazeTexture.Texture.Width / 2,
+                startposy + mazeTexture.Texture.Height / 2, Constants.Blocksize - 2, Constants.Blocksize - 2, Color.Red);
             var half = Constants.Blocksize / 2;
             cameradirection = cameradirection * half;
-            Raylib.DrawRectangle(
-                startposx + mazeTexture.texture.width / 2 + (int)cameradirection.X + half / 2,
-                startposy + mazeTexture.texture.height / 2 + (int)cameradirection.Z + half / 2, half, half, Color.BLACK);
+            Graphics.DrawRectangle(
+                startposx + mazeTexture.Texture.Width / 2 + (int)cameradirection.X + half / 2,
+                startposy + mazeTexture.Texture.Height / 2 + (int)cameradirection.Z + half / 2, half, half, Color.Black);
         }
 
 
         private HashSet<(int, int)> DrawLevel()
         {
-            var dpos = Tools.DrawOffsetByQuadrant(Constants.DefaultOffset, camera.position);
-            Raylib.DrawModel(transit, dpos, Constants.Scale, Constants.Tint);
+            var dpos = Tools.DrawOffsetByQuadrant(Constants.DefaultOffset, camera.Position);
+            Graphics.DrawModel(transit, dpos, Constants.Scale, Constants.Tint);
            
             dpos = Tools.DrawOffsetByQuadrant(
-                    new Vector3(Constants.Exitpos, 1, Constants.Exitpos) + Constants.DefaultOffset, camera.position);
+                    new Vector3(Constants.Exitpos, 1, Constants.Exitpos) + Constants.DefaultOffset, camera.Position);
 
-            Raylib.DrawModel(transit, dpos, Constants.Scale, Constants.Tint);
+            Graphics.DrawModel(transit, dpos, Constants.Scale, Constants.Tint);
 
             var drawList = new HashSet<(int, int)>();
-            Checkvisibility(camera.position.X, camera.position.Z, ref drawList);
+            Checkvisibility(camera.Position.X, camera.Position.Z, ref drawList);
             if (!render3d) return drawList;
 
-            foreach (var tup in drawList)
+            foreach (var tup in drawList.Distinct())
             {
                 DrawTile(tup.Item1, tup.Item2);
-
             }
 
             //DrawTiles(drawList);
-
-            Rlgl.rlDisableDepthMask();
-            Raylib.BeginBlendMode(BlendMode.BLEND_ADD_COLORS);
+            
+            RlGl.DisableDepthMask();
+            Graphics.BeginBlendMode(BlendMode.AddColors);
             foreach (var tup in drawList.Where(elem => TileCondition(elem, 10)))
             {
                 dpos = Tools.DrawOffsetByQuadrant(new Vector3(tup.Item1, 0, tup.Item2) + Constants.DefaultOffset,
-                    camera.position);
-                Raylib.DrawModel(spiderweb, dpos, Constants.Scale, Constants.Tint);
+                    camera.Position);
+                Graphics.DrawModel(spiderweb, dpos, Constants.Scale, Constants.Tint);
             }
+            
 
-            Raylib.EndBlendMode();
-            Rlgl.rlEnableDepthMask();
+            Graphics.EndBlendMode();
+            RlGl.EnableDepthMask();
             if (displayOverlay)
-                Raylib.DrawSphere(camera.position + Vector3.Normalize(camera.target - camera.position) * .1f,
+                Graphics.DrawSphere(camera.Position + Vector3.Normalize(camera.Target - camera.Position) * .1f,
                     .001f, new Color(255, 255, 255, 64));
 
             return drawList;
@@ -435,7 +432,7 @@ namespace MazeGame.Loops
 
         private IEnumerable<Directions> DirectionsFromCamera()
         {
-            var floatDirection = Vector3.Normalize(camera.target - camera.position);
+            var floatDirection = Vector3.Normalize(camera.Target - camera.Position);
             foreach (var dir in MazeGenerator.Dirx(floatDirection.X))
                 yield return dir;
             foreach (var dir in MazeGenerator.Diry(floatDirection.Z))
@@ -445,7 +442,7 @@ namespace MazeGame.Loops
 
         private (int, int) TileIndexFromCamera()
         {
-            return ((int)Math.Floor(camera.position.X), (int)Math.Floor(camera.position.Z));
+            return ((int)Math.Floor(camera.Position.X), (int)Math.Floor(camera.Position.Z));
         }
 
         private void Checkvisibility(float camx, float camz, ref HashSet<(int, int)> drawList)
@@ -453,7 +450,7 @@ namespace MazeGame.Loops
             var x = (int)Math.Floor(camx);
             var z = (int)Math.Floor(camz);
 
-            var floatDirection = Vector3.Normalize(camera.target - camera.position);
+            var floatDirection = Vector3.Normalize(camera.Target - camera.Position);
             if (CheckvisibilityLoop(x, z, Directions.Undefined, DirectionsFromCamera().ToArray(), 0, ref drawList))
                 Tools.Drawtrangle(floatDirection, x, z, maxdepth, maze, ref drawList);
 
@@ -507,34 +504,46 @@ namespace MazeGame.Loops
             return drawtrangle;
         }
 
+        private void AudioProcessEffectLPF(float[] buffer, uint frames)
+        {
+
+            // Converts the buffer data before using it
+            for (uint i = 0; i < frames * 2; i += 2)
+            {
+                int delay = 4410; // 0.1 second delay at 44.1kHz
+                buffer[i] = buffer[i] + buffer[Math.Max(0,i-delay)];
+            }
+        }
+
 
 
         private void DrawTile(int x, int z)
         {
-            var dpos = Tools.DrawOffsetByQuadrant(new Vector3(x, 0, z) + Constants.DefaultOffset, camera.position);
+            var dpos = Tools.DrawOffsetByQuadrant(new Vector3(x, 0, z) + Constants.DefaultOffset, camera.Position);
             var tile = maze[x, z];
+            var scale= Constants.Scale;
+            //var scale = 1.0f;
             if (wireframe)
             {
                 {
-                    Raylib.DrawModelWires(parts[tile], dpos, Constants.Scale, Constants.Tint);
-
+                    Graphics.DrawModelWires(parts[tile], dpos, scale, Constants.Tint);
 
                     if (tile < Blocks.Room)
                     {
-                        Raylib.DrawModelWires(moss, dpos, Constants.Scale, Constants.Tint);
-                        Raylib.DrawModelWires(mud, dpos, Constants.Scale, Constants.Tint);
+                        Graphics.DrawModelWires(moss, dpos, scale, Constants.Tint);
+                        Graphics.DrawModelWires(mud, dpos, scale, Constants.Tint);
                     }
                 }
             }
             else
             {
                 {
-                    Raylib.DrawModel(parts[tile], dpos, Constants.Scale, Constants.Tint);
-                    Raylib.DrawModel(mud, dpos, Constants.Scale, Constants.Tint);
+                    Graphics.DrawModel(parts[tile], dpos, scale, Constants.Tint);
+                    Graphics.DrawModel(mud, dpos, scale, Constants.Tint);
 
                     if (tile < Blocks.Room)
                     {
-                        Raylib.DrawModel(moss, dpos, Constants.Scale, Constants.Tint);
+                        Graphics.DrawModel(moss, dpos, scale, Constants.Tint);
                     }
                 }
             }
@@ -544,18 +553,18 @@ namespace MazeGame.Loops
         {
 
             foreach (var model in models)
-                Raylib.UnloadModel(model);
+                model.Unload();
 
             foreach (var texture in textures.SelectMany(t => t.Value.Values))
-                Raylib.UnloadTexture(texture);
+                texture.Unload();
 
             foreach (var image in images.Values)
-                Raylib.UnloadImage(image);
+                image.Unload();
 
-            Raylib.UnloadTexture(mazeblocks);
-            Raylib.UnloadRenderTexture(mazeTexture);
-            Raylib.UnloadMusicStream(backroundNoise);
-            Raylib.UnloadMusicStream(footsteps);
+            mazeblocks.Unload();
+            mazeTexture.Unload();
+            backroundNoise.UnloadStream();
+            footsteps.UnloadStream();
         }
     }
 }

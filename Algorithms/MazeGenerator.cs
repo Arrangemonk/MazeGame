@@ -5,7 +5,15 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using MazeGame.Common;
-using Raylib_cs;
+using Raylib_CSharp;
+using Raylib_CSharp.Collision;
+using Raylib_CSharp.Colors;
+using Raylib_CSharp.Geometry;
+using Raylib_CSharp.Images;
+using Raylib_CSharp.Rendering;
+using Raylib_CSharp.Shaders;
+using Raylib_CSharp.Textures;
+using Raylib_CSharp.Transformations;
 
 namespace MazeGame.Algorithms
 {
@@ -121,7 +129,7 @@ namespace MazeGame.Algorithms
 
                 var rect = new Rectangle(posx - 1, posy - 1, width + 1, height + 1);
 
-                if (rectangles.Any(r => Raylib.CheckCollisionRecs(r, rect)))
+                if (rectangles.Any(r => ShapeHelper.CheckCollisionRecs(r, rect)))
                 {
                     amount++;
                     continue;
@@ -310,7 +318,7 @@ namespace MazeGame.Algorithms
         }
 
         public static Dictionary<Blocks, Model> PrepareMazeParts(Shader shader, string basepath,
-            ref Dictionary<string, Dictionary<string, Texture2D>> textures,ref Dictionary<string, Image> images, ref List<Model> models)
+            ref Dictionary<string, Dictionary<string, Texture2D>> textures,ref Dictionary<string, Image> images, ref List<Model> models,Color? fogColor)
         {
             var rot000 = Matrix4x4.Identity;
             var rot090 = Matrix4x4.CreateRotationY(Tools.Pi * .5f);
@@ -325,24 +333,24 @@ namespace MazeGame.Algorithms
 
             var result = new Dictionary<Blocks, Model>
             {
-                { Blocks.Horizontal, Tools.PrepareModel(Path.Combine(basepath,straight), basepath, shader, rot090, ref textures,ref images,ref models) },
-                { Blocks.Vertical, Tools.PrepareModel(Path.Combine(basepath,straight), basepath, shader, rot000, ref textures, ref images,ref models) },
-                { Blocks.CornerNorhEast, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot180, ref textures, ref images,ref models) },
-                { Blocks.CornerNorthWest, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot270, ref textures, ref images,ref models) },
-                { Blocks.CornderSouthEast, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot090, ref textures, ref images,ref models) },
-                { Blocks.CornerSouthWest, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot000, ref textures, ref images,ref models) },
-                { Blocks.TcrossHorizontalNorth, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot180, ref textures, ref images,ref models) },
-                { Blocks.TcrossHorizontalSouth, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot000, ref textures, ref images,ref models) },
-                { Blocks.TcrossVerticalEast, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot090, ref textures, ref images,ref models) },
-                { Blocks.TcrossVerticalWest, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot270, ref textures, ref images,ref models) },
-                { Blocks.EndNorth, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot180, ref textures, ref images,ref models) },
-                { Blocks.EndSouth, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot000, ref textures, ref images,ref models) },
-                { Blocks.EndEast, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot090, ref textures, ref images,ref models) },
-                { Blocks.EndWest, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot270, ref textures, ref images,ref models) },
-                { Blocks.Cross, Tools.PrepareModel(Path.Combine(basepath,cross), basepath, shader, rot180, ref textures, ref images,ref models) },
-                { Blocks.Undefined,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot180, ref textures, ref images,ref models) },
-                { Blocks.Room,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot000, ref textures, ref images,ref models) },
-                { Blocks.RoomBlocked,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot000, ref textures, ref images,ref models)}
+                { Blocks.Horizontal, Tools.PrepareModel(Path.Combine(basepath,straight), basepath, shader, rot090, ref textures,ref images,ref models,fogColor) },
+                { Blocks.Vertical, Tools.PrepareModel(Path.Combine(basepath,straight), basepath, shader, rot000, ref textures, ref images,ref models,fogColor) },
+                { Blocks.CornerNorhEast, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot180, ref textures, ref images,ref models,fogColor) },
+                { Blocks.CornerNorthWest, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot270, ref textures, ref images,ref models,fogColor) },
+                { Blocks.CornderSouthEast, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot090, ref textures, ref images,ref models,fogColor) },
+                { Blocks.CornerSouthWest, Tools.PrepareModel(Path.Combine(basepath,corner), basepath, shader, rot000, ref textures, ref images,ref models,fogColor) },
+                { Blocks.TcrossHorizontalNorth, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot180, ref textures, ref images,ref models,fogColor) },
+                { Blocks.TcrossHorizontalSouth, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot000, ref textures, ref images,ref models,fogColor) },
+                { Blocks.TcrossVerticalEast, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot090, ref textures, ref images,ref models,fogColor) },
+                { Blocks.TcrossVerticalWest, Tools.PrepareModel(Path.Combine(basepath,tcross), basepath, shader, rot270, ref textures, ref images,ref models,fogColor) },
+                { Blocks.EndNorth, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot180, ref textures, ref images,ref models,fogColor) },
+                { Blocks.EndSouth, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot000, ref textures, ref images,ref models,fogColor) },
+                { Blocks.EndEast, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot090, ref textures, ref images,ref models,fogColor) },
+                { Blocks.EndWest, Tools.PrepareModel(Path.Combine(basepath,end), basepath, shader, rot270, ref textures, ref images,ref models,fogColor) },
+                { Blocks.Cross, Tools.PrepareModel(Path.Combine(basepath,cross), basepath, shader, rot180, ref textures, ref images,ref models,fogColor) },
+                { Blocks.Undefined,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot180, ref textures, ref images,ref models,fogColor) },
+                { Blocks.Room,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot000, ref textures, ref images,ref models,fogColor) },
+                { Blocks.RoomBlocked,  Tools.PrepareModel(Path.Combine(basepath,room), basepath, shader, rot000, ref textures, ref images,ref models,fogColor)}
             };
             return result;
         }

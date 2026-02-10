@@ -2,7 +2,10 @@
 using MazeGame.Algorithms;
 using MazeGame.Common;
 using MazeGame.Loops;
-using Raylib_cs;
+using Raylib_CSharp;
+using Raylib_CSharp.Audio;
+using Raylib_CSharp.Interact;
+using Raylib_CSharp.Windowing;
 
 namespace MazeGame
 {
@@ -15,19 +18,19 @@ namespace MazeGame
         public static MenuLoop _menuLoop;
         public static void Main()
         {
-            Raylib.SetConfigFlags(ConfigFlags.FLAG_MSAA_4X_HINT);
-            Raylib.InitWindow(sizex, sizey, "Maze Game");
-            Raylib.InitAudioDevice();
-            var monitor = Raylib.GetCurrentMonitor();
-            Raylib.SetTargetFPS(Raylib.GetMonitorRefreshRate(monitor) *2);
+            Raylib.SetConfigFlags(ConfigFlags.Msaa4XHint);
+            Window.Init(sizex, sizey, "Maze Game");
+            AudioDevice.Init();
+            var monitor = Window.GetCurrentMonitor();
+            Time.SetTargetFPS(Window.GetMonitorRefreshRate(monitor));
             var startupLoop = new StartupLoop();
             _gameLoop = new GameLoop();
             var task = _gameLoop.StartInit();
             _menuLoop = new MenuLoop();
 
-            Raylib.DisableCursor();
+            Input.DisableCursor();
             var startTime = DateTime.Now;
-            while (!Raylib.WindowShouldClose())
+            while (!Window.ShouldClose())
             {
                 switch (State)
                 {
@@ -52,8 +55,8 @@ namespace MazeGame
             startupLoop.Dispose();
             _menuLoop.Dispose();
             _gameLoop.Dispose();
-            Raylib.CloseAudioDevice();
-            Raylib.CloseWindow();
+            AudioDevice.Close();
+            Window.Close();
         }
 
         //private static async Task Create()
@@ -64,18 +67,18 @@ namespace MazeGame
 
         public static void Togglefullscreen()
         {
-            if (Raylib.IsWindowFullscreen())
+            if (Window.IsFullscreen())
             {
-                Raylib.SetWindowSize(sizex, sizey);
-                Raylib.ToggleFullscreen();
+                Window.SetSize(sizex, sizey);
+                Window.ToggleFullscreen();
             }
             else
             {
-                var monitor = Raylib.GetCurrentMonitor();
-                var x = Raylib.GetMonitorWidth(monitor);
-                var y = Raylib.GetMonitorHeight(monitor);
-                Raylib.SetWindowSize(x, y);
-                Raylib.ToggleFullscreen();
+                var monitor = Window.GetCurrentMonitor();
+                var x = Window.GetMonitorWidth(monitor);
+                var y = Window.GetMonitorHeight(monitor);
+                Window.SetSize(x, y);
+                Window.ToggleFullscreen();
             }
 
         }

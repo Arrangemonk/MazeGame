@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -24,12 +24,11 @@
     <None Remove="resources\models\end.obj" />
     <None Remove="resources\models\floor.obj" />
     <None Remove="resources\models\moss.obj" />
+    <None Remove="resources\models\spiderweb.obj" />
     <None Remove="resources\models\stairs.obj" />
     <None Remove="resources\models\straight.obj" />
     <None Remove="resources\models\tcross.obj" />
     <None Remove="resources\models\wall.obj" />
-    <None Remove="resources\shaders\normal_mapping.fs.glsl" />
-    <None Remove="resources\shaders\normal_mapping.vs.glsl" />
     <None Remove="resources\shaders\normal_mapping_instanced.fs.glsl" />
     <None Remove="resources\textures\brick_diff.dds" />
     <None Remove="resources\textures\brick_disp.dds" />
@@ -67,6 +66,12 @@
     <Content Include="resources\mazeblocks_8.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="resources\models\spiderweb.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="resources\models\stairs.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="resources\models\wall.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -74,9 +79,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\models\moss.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\models\stairs.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\shaders\normal_mapping_instanced.fs.glsl">
@@ -104,12 +106,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\textures\mud_spec.dds">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\shaders\normal_mapping.fs.glsl">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resources\shaders\normal_mapping.vs.glsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="resources\textures\plaster_diff.dds">
@@ -148,7 +144,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Raylib-cs" Version="4.5.0" />
+    <PackageReference Include="Raylib-CSharp" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -173,10 +169,19 @@
     <None Update="resources\mazeblocks_minimal.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="resources\models\brick\corner.glb">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="resources\models\brick\corner.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="resources\models\brick\cross.glb">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="resources\models\brick\cross.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\models\brick\end.glb">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="resources\models\brick\end.obj">
@@ -185,7 +190,13 @@
     <None Update="resources\models\brick\room.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="resources\models\brick\straight.glb">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="resources\models\brick\straight.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\models\brick\tcross.glb">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="resources\models\brick\tcross.obj">
@@ -212,9 +223,6 @@
     <None Update="resources\models\room.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="resources\models\spiderweb.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="resources\models\upwards_pipe.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -231,6 +239,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="resources\shaders\gbuffer.vs.glsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\shaders\normal_mapping.fs.glsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="resources\shaders\normal_mapping.vs.glsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="resources\shaders\normal_mapping_instanced.vs.glsl">
@@ -413,6 +427,10 @@
     <None Update="resources\textures\stairs_specl.dds">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
   </ItemGroup>
 
 </Project>
